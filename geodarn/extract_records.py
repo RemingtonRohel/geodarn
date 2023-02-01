@@ -1,6 +1,9 @@
 from datetime import datetime
+import collections
+
 import numpy as np
-import copy
+
+import utils.fitacf_format as fitacf
 
 
 def extract_single_scan(fitacf_data, nearest_time):
@@ -114,25 +117,51 @@ def group_records_by_timestamp(records):
     return output_records
 
 
-# def params_from_scan(fitacf_data):
-#     """
-#     Extracts only the fitted parameters (p_l, v, w_l, and elv) from a set of fitacf records.
-#
-#     Parameters
-#     ----------
-#     fitacf_data: list[dict]
-#         List of FITACF record dictionaries.
-#
-#     Returns
-#     -------
-#     record_data: list[dict]
-#         All records within 2 seconds of nearest_time.
-#     """
-#     params = ['p_l', 'v', 'w_l', 'elv']
-#     init_array = np.zeros((16, fitacf_data[0]['nrang'])) * np.nan
-#     record_data = {param: copy.deepcopy(init_array) for param in params}
-#     for rec in fitacf_data:
-#         for param in params:
-#             record_data[param][rec['bmnum'], rec['slist']] = rec[param]  # Only fill the valid ranges
-#
-#     return record_data
+def merge_simultaneous_records(records):
+    """
+    Takes a list of records and merges records with matching timestamps.
+
+    Parameters
+    ----------
+    records: list[dict]
+        List of FITACF record dictionaries.
+
+    Returns
+    -------
+    output_records: list[dict]
+        List of records
+    """
+    grouped_records = group_records_by_timestamp(records)
+    merged_records = []
+
+    for group in grouped_records:
+        merged_record = collections.defaultdict(list)
+
+        for k in group[0].keys():
+            # Add all fields common across the simultaneous records
+            if k in fitacf.scan_specific_scalars:
+                merged_record[k] = group[0][k]
+            elif k in fitacf.scan_specific_vectors:
+                merged_record[k] = group[0][k]
+
+            # Add all fields unique to each record in the scan
+            elif k in fitacf.record_specific_scalars:
+                for rec in group:
+                    try:
+                        merged_record[k].append(np.ones(rec['slist'].shape) * rec[k])
+                    except KeyError:
+                        # There was no data for the record. Continue
+                        pass
+                merged_record[k] = np.concatenate(merged_record[k])
+            elif k in fitacf.record_specific_vectors:
+                for rec in group:
+                    merged_record[k].append(rec[k])
+                merged_record[k] = np.concatenate(merged_record[k])
+
+            # Unknown quantity
+            else:
+                raise KeyError(f'Unknown record key {k}')
+
+        merged_records.append(merged_record)
+
+    return merged_records
