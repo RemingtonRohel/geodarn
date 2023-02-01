@@ -23,7 +23,7 @@ def read_fitacf(infile: str):
     return sdarn_read.read_fitacf()
 
 
-def write_geographic_scatter(records, outfile):
+def write_geographic_scatter(records, outfile, rx_site, tx_site):
     """
     Writes a list of geolocated records to outfile. Saves as an HDF5 file.
 
@@ -50,6 +50,8 @@ def write_geographic_scatter(records, outfile):
                                   rec['time.hr'], rec['time.mt'], rec['time.sc'])
 
             group = f.create_group(start_time.strftime('%Y%m%d-%H:%M:%S.%f'))  # e.g. 20210101-18:30:01.906748
+            group.attrs['rx_site'] = rx_site
+            group.attrs['tx_site'] = tx_site
 
             # The following values are expected to be single values per record
             integration_time = group.create_dataset('integration_time', (1,), dtype='f4')
@@ -78,3 +80,36 @@ def write_geographic_scatter(records, outfile):
             power[:] = rec['p_l']
             velocity[:] = rec['v']
             spectral_width[:] = rec['w_l']
+
+
+def read_geodarn_file(infile):
+    """
+    Reads an HDF5 file containing geolocated SuperDARN data.
+
+    Parameters
+    ----------
+    infile: str
+        Path to file with geolocated SuperDARN data.
+
+    Returns
+    -------
+    dict:
+        Dictionary of attributes and datasets stored in the file.
+    """
+    with h5py.File(infile, 'r') as f:
+        file_dict = {
+            'experiment_cpid': f.attrs['experiment_cpid'],
+            'station_id': f.attrs['station_id'],
+            'comment': f.attrs['comment'],
+            'records': {}
+        }
+
+        for rec in sorted(list(f.keys())):
+            rec_dict = {}
+            for k in f[rec].keys():
+                rec_dict[k] = f[rec][k][()]     # load into memory
+            for k in f[rec].attrs:
+                rec_dict[k] = f[rec].attrs[k]
+            file_dict['records'][rec] = rec_dict
+
+    return file_dict

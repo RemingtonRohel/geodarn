@@ -34,7 +34,7 @@ def process_file(infile, outfile, tx_site, rx_site):
             geo_records.append(result)
 
     print(f'Writing results to file {outfile}')
-    file_ops.write_geographic_scatter(geo_records, outfile)
+    file_ops.write_geographic_scatter(geo_records, outfile, rx_site, tx_site)
 
 
 if __name__ == '__main__':
