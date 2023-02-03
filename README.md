@@ -5,4 +5,5 @@ Geolocation library for scatter from SuperDARN FITACF files.
 * Numpy
 * pyDARNio
 * Cartopy
-* Shapely (for plotting only)
+* Shapely (for plotting only, needed for cartopy)
+* h5py
