@@ -3,7 +3,7 @@ import warnings
 import numpy as np
 import cartopy.geodesic
 
-from utils import sites
+from utils.parse_hdw import Hdw
 
 
 def find_elevation(site_id, beam_dirs, freq_hz, phi0):
@@ -21,15 +21,19 @@ def find_elevation(site_id, beam_dirs, freq_hz, phi0):
     phi0: float
         Phase offset between main and interferometer arrays, in radians.
     """
-    site = sites[site_id]   # hardware information from here
+    site = Hdw.read_hdw_file(site_id)   # hardware information from here
 
     c = 299792458
     wave_num = 2 * np.pi * freq_hz / c
     beam_dirs = np.deg2rad(beam_dirs)
     antenna_sep = 100   # meters between array midpoints
 
-    cable_offset = -2 * np.pi * freq_hz * site['tdiff'] * 1e-6     # implement tdiff here if needed
-    phase_diff_max = site['intf_in_front'] * wave_num * antenna_sep * np.cos(beam_dirs) + cable_offset
+    cable_offset = -2 * np.pi * freq_hz * site.tdiff_a * 1e-6     # implement tdiff here if needed
+    if site.intf_y_offset < 0:
+        intf_in_front = -1
+    else:
+        intf_in_front = 1
+    phase_diff_max = intf_in_front * wave_num * antenna_sep * np.cos(beam_dirs) + cable_offset
 
     psi_uncorrected = phi0 + 2 * np.pi * np.floor((phase_diff_max - phi0) / (2 * np.pi))
 
@@ -146,10 +150,10 @@ def geolocate_scatter(tx_site, rx_site, elv, bmazm, slist):
     """
     r_e = 6378.0    # Radius of Earth, km
     geodesic = cartopy.geodesic.Geodesic()
-    rx = sites[rx_site]
-    tx = sites[tx_site]
+    rx = Hdw.read_hdw_file(rx_site)
+    tx = Hdw.read_hdw_file(tx_site)
 
-    rx_tx_line = geodesic.inverse((rx['lon'], rx['lat']), (tx['lon'], tx['lat']))
+    rx_tx_line = geodesic.inverse((rx.location[1], rx.location[0]), (tx.location[1], tx.location[0]))
     site_separation = rx_tx_line[0, 0] / 1000   # km
     site_arc = site_separation / r_e            # arc angle in radians
     cos_site_arc = np.cos(site_arc)
@@ -157,7 +161,7 @@ def geolocate_scatter(tx_site, rx_site, elv, bmazm, slist):
     rx_angle = rx_tx_line[0, 1]                 # angle CW of North of direct line at RX site, in degrees
 
     rad_elv = np.deg2rad(elv)
-    true_az_dirs = rx['boresight'] + azimuth_from_elevation(elv, bmazm)  # CW of North
+    true_az_dirs = rx.boresight_direction + azimuth_from_elevation(elv, bmazm)  # CW of North
 
     alphas = np.abs(rx_angle - true_az_dirs)    # scatter-rx-tx angle on surface of Earth
     cos_alphas = np.cos(np.deg2rad(alphas))
@@ -179,8 +183,8 @@ def geolocate_scatter(tx_site, rx_site, elv, bmazm, slist):
     rx_scatter_dist_m = r_e * rx_scatter_arc * 1000                             # ground distance of rx leg
 
     # Get scatter ground projection, and rx->scatter and tx->scatter directions at scatter location.
-    rx_scatter_line = geodesic.direct((rx['lon'], rx['lat']), true_az_dirs, rx_scatter_dist_m)
-    tx_scatter_line = geodesic.inverse((tx['lon'], tx['lat']), rx_scatter_line[:, :2])
+    rx_scatter_line = geodesic.direct((rx.location[1], rx.location[0]), true_az_dirs, rx_scatter_dist_m)
+    tx_scatter_line = geodesic.inverse((tx.location[1], tx.location[0]), rx_scatter_line[:, :2])
 
     def normalize_angle(angle_deg):
         """Brings an angle (in degrees) into range [-180, 180)"""
@@ -190,7 +194,7 @@ def geolocate_scatter(tx_site, rx_site, elv, bmazm, slist):
 
     # If boresight is CCW of rx-tx line (like RKN->INV pair), then forward points in a bistatic pair are points for
     # which the scatter point is CCW of the rx-tx line. Opposite for boresight CW of rx-tx line.
-    if normalize_angle(rx['boresight'] - rx_tx_line[0, 1]) < 0:
+    if normalize_angle(rx.boresight_direction - rx_tx_line[0, 1]) < 0:
         forward_points = angular_difference < 0
     else:
         forward_points = angular_difference > 0
@@ -221,88 +225,6 @@ def geolocate_scatter(tx_site, rx_site, elv, bmazm, slist):
                }
 
     return results
-
-
-# def triangulation(tx_site, rx_site, record):
-#     """
-#     Takes a list of FITACF records and runs geolocate_scatter on each record.
-#
-#     Parameters
-#     ----------
-#     tx_site: str
-#         Three-letter radar code of transmitter site, such as 'rkn' or 'sas'. Lowercase letters.
-#     rx_site: str
-#         Three-letter radar code of receiver site, such as 'rkn' or 'sas'. Lowercase letters.
-#     record: dict
-#         FITACF record (dictionary) to process.
-#
-#     Returns
-#     -------
-#     List of geolocated scatter dictionaries, which have keys:
-#         'scatter_location':     (lon, lat) position of scatter location for each point.
-#         'look_dir':             Direction CW of North for velocity vector of each point.
-#         'h_mid':                Virtual height of midpoint for each point.
-#         'h_rx':                 Virtual height seen by RX radar for each point.
-#         'h_tx':                 Virtual height seen by TX radar for each point.
-#         'rx_arc':               Geocentral angle travelled from Scatter-RX for each point.
-#         'tx_arc':               Geocentral angle travelled from TX-Scatter for each point.
-#         'total_arc':            Geocentral angle travelled from TX-Scatter-TX for each point.
-#         'rx_gnd_range':         Ground distance from Scatter-RX for each point.
-#         'tx_gnd_range':         Ground distance from TX-Scatter for each point.
-#         'gnd_range':            Total ground distance traversed from RX-Scatter-TX for each point.
-#         'alpha':                Scatter-RX-TX angle for each point
-#         'beam':                 Beam number for each point.
-#         'bmazm':                Beam azimuths relative to boresight for each point.
-#         'true_bmazm':           Beam azimuths relative to boresight for each point, correcting for elevation.
-#         'gsct':                 Groundscatter flag for each point.
-#         'group_range':          Group range for each point.
-#         'elv':                  Elevation values for each point.
-#         'slist':                Range gate values for each point.
-#         'velocity_correction':  Bistatic correction factor for velocity measurements.
-#     """
-#     list_results = collections.defaultdict(list)    # For storing results of each record in scan
-#
-#     for rec in records:
-#         try:
-#             geolocated = geolocate_scatter(tx_site, rx_site, rec['elv'], rec['bmazm'], rec['slist'], rec['bmnum'],
-#                                            rec['gflg'])
-#             for k, v in geolocated.items():
-#                 list_results[k].append(v)
-#         except KeyError as err:
-#             print('Warning: partial record', err)
-#
-#     results = {k: np.concatenate(v) for k, v in list_results.items()}
-#
-#     return results
-
-
-def extract_values(param, results, record):
-    """
-    Extracts param from geolocation results and the record itself.
-
-    Parameters
-    ----------
-    param: str
-        Parameter to extract.
-    results: dict
-        Dictionary that is returned by geolocate_scatter() function.
-    record: dict
-        Dictionary of a FITACF record.
-
-    Returns
-    -------
-    values: Any
-        Whatever is held under 'param' in results or record dicts.
-    """
-    values = None
-    if param in results.keys():
-        values = results[param]
-    else:   # anything not extracted in geolocation function
-        try:
-            values = record[param]
-        except KeyError as err:
-            print(f'Parameter {param} unrecognized: {err}')
-    return values
 
 
 def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
@@ -355,10 +277,10 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
         return
 
     geodesic = cartopy.geodesic.Geodesic()
-    rx = sites[rx_site]
-    tx = sites[tx_site]
+    rx = Hdw.read_hdw_file(rx_site)
+    tx = Hdw.read_hdw_file(tx_site)
 
-    distances = geodesic.inverse((rx['lon'], rx['lat']), (tx['lon'], tx['lat']))
+    distances = geodesic.inverse((rx.location[1], rx.location[0]), (tx.location[1], tx.location[0]))
     site_separation = distances[0, 0] / 1000  # km
     min_range_gate = round((site_separation - 360) / 90.)               # based on great circle distance between sites
 

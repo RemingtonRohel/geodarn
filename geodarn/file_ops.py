@@ -4,6 +4,8 @@ import numpy as np
 import h5py
 import pydarnio
 
+from utils import formats
+
 
 def read_fitacf(infile: str):
     """

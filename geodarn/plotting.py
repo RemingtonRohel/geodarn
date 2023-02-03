@@ -10,7 +10,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 
-from utils import sites
+from utils import parse_hdw
+from utils.constants import sites
 import geolocation as gl
 import file_ops
 
@@ -25,15 +26,16 @@ def azimuthal_lines(site, min_range, max_range, beam_width=3.24, elevation=0.0):
     :param beam_width: Angular separation between beams, in degrees.
     :param elevation: Degrees above horizontal
     """
-    site_data = sites[site]
+    site_data = parse_hdw.Hdw.read_hdw_file(site)
 
     az_lines = []
 
     # Compute the azimuthal divisions of the site FOV
     for i in range(-8, 9):
-        tx_bearing = site_data['boresight'] + gl.azimuth_from_elevation(elevation, i * beam_width)
+        tx_bearing = site_data.boresight_direction + gl.azimuth_from_elevation(elevation, i * beam_width)
         ranges = np.linspace(min_range, max_range, 100) * 1e3  # meters
-        tx_radial_line = cartopy.geodesic.Geodesic().direct((site_data['lon'], site_data['lat']), tx_bearing, ranges)
+        tx_radial_line = cartopy.geodesic.Geodesic().direct((site_data.location[1], site_data.location[0]),
+                                                            tx_bearing, ranges)
         tx_geom = shapely.geometry.LineString(tx_radial_line)
         az_lines.append(tx_geom)
 
@@ -82,7 +84,7 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
     :param lat_extent:  tuple of (lat, lat) defining the latitudinal extent of the plot.
     :param **kwargs:    Any other keyword arguments which will be passed to plt.subplots()
     """
-    ids = [sites[s] for s in site_ids]
+    ids = [parse_hdw.Hdw.read_hdw_file(s) for s in site_ids]
 
     # Set up the plot
     ot = ccrs.Orthographic(center[0], center[1])
@@ -99,11 +101,12 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
 
         # Mark the sites
         for site, site_id in zip(ids, site_ids):
-            ax.plot(site['lon'], site['lat'], markersize=5, color='blue', marker='o', transform=ccrs.PlateCarree())
+            ax.plot(site.location[1], site.location[0], markersize=5, color='blue', marker='o',
+                    transform=ccrs.PlateCarree())
             platecarree_transform = ccrs.PlateCarree()._as_mpl_transform(ax)
             tx_transform = offset_copy(platecarree_transform, units='dots', x=site['hshift'], y=site['vshift'])
-            ax.text(site['lon'], site['lat'], f'\\textbf{{{site_id.upper()}}}', verticalalignment=site['valign'],
-                    horizontalalignment=site['halign'], transform=tx_transform)
+            ax.text(site.location[1], site.location[0], f'\\textbf{{{site_id.upper()}}}', verticalalignment='bottom',
+                    horizontalalignment='left', transform=tx_transform)
 
     if isinstance(axes, np.ndarray):
         for axis in axes.flatten():

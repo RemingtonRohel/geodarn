@@ -87,9 +87,9 @@ if __name__ == '__main__':
     if rx_site != tx_site:
         site_ids.append(tx_site)
 
-    # # Plot the data on a map
-    # record = geo_records['records'][timestamps[0]]
-    # plotting.plot_single_param_from_scan(fig, ax, record, 'power', label='Power [dB]', site_ids=site_ids)
+    # Plot the data on a map
+    record = geo_records['records'][timestamps[0]]
+    plotting.plot_single_param_from_scan(fig, ax, record, 'power', label='Power [dB]', site_ids=site_ids)
 
     plt.show()
     plt.close()

@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -39,7 +40,7 @@ class Hdw:
         if len(site) != 3:
             raise ValueError(f'Invalid site code: {site}')
         site_name = site.lower()
-        filename = f'hdw/hdw.dat.{site_name}'
+        filename = f'{os.path.dirname(__file__)}/hdw/hdw.dat.{site_name}'
         with open(filename, 'r') as f:
             lines = f.readlines()
 
