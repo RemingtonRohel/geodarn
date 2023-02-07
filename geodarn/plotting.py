@@ -197,7 +197,7 @@ def plot_single_param_from_scan(fig, ax, record, param, label=None, site_ids=(),
 
     plot_values = record[param]
 
-    if param == 'v' and stem:
+    if param == 'velocity' and stem:
         scale_value = 250  # Ratio of geographic distance in meters of plotted vector to LOS velocity value in m/s
         end_points = cartopy.geodesic.Geodesic().direct(record['locations'], record['velocity_dirs'],
                                                         scale_value * plot_values)

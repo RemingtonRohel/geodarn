@@ -1,4 +1,5 @@
 import warnings
+from datetime import datetime
 
 import numpy as np
 import cartopy.geodesic
@@ -37,7 +38,7 @@ def find_elevation(site_id, beam_dirs, freq_hz, phi0):
 
     psi_uncorrected = phi0 + 2 * np.pi * np.floor((phase_diff_max - phi0) / (2 * np.pi))
 
-    if site['intf_in_front'] < 0:
+    if intf_in_front < 0:
         psi_uncorrected += 2 * np.pi
 
     psi = psi_uncorrected - cable_offset
@@ -340,15 +341,10 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
 
     # Scalar fields
     results['cp'] = record['cp']
-    results['time.yr'] = record['time.yr']
-    results['time.mo'] = record['time.mo']
-    results['time.dy'] = record['time.dy']
-    results['time.hr'] = record['time.hr']
-    results['time.mt'] = record['time.mt']
-    results['time.sc'] = record['time.sc']
-    results['time.us'] = record['time.us']
-    results['intt.sc'] = record['intt.sc']
-    results['intt.us'] = record['intt.us']
+    results['timestamp'] = datetime(record['time.yr'], record['time.mo'], record['time.dy'],
+                                    record['time.hr'], record['time.mt'], record['time.sc'],
+                                    record['time.us'])
+    results['duration'] = record['intt.sc'] + record['intt.us'] * 1e-6
     results['stid'] = record['stid']
     results['nave'] = record['nave']
     results['tfreq'] = record['tfreq']

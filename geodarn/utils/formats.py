@@ -7,8 +7,9 @@ from dataclasses import dataclass, field, fields
 import numpy as np
 import h5py
 import datetime
+import collections
 
-from . import parse_hdw
+from utils import parse_hdw
 
 
 def version():
@@ -34,102 +35,94 @@ __created__ = created()
 
 @dataclass
 class Info:
-    date_created: str = field(
-        default=__created__,
-        metadata={'type': 'str',
-                  'units': 'None',
-                  'shape': 19,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'the date and time this file was generated'})
-    date: np.ndarray((3,), dtype=int) = field(
-        default=np.asarray([0, 0, 0], dtype=int),
-        metadata={'type': 'int32',
-                  'units': 'None',
-                  'shape': (3,),
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'starting date of the data contained within'})
-    experiment_name: str = field(
-        default=None,
-        metadata={'type': 'str',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'name of experiment ran (ex; normalscan, twofsound)'})
-    experiment_cpid: int = field(
-        default=None,
-        metadata={'type': 'int32',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'control program id of experiment ran'})
-    comment: str = field(
-        default=None,
-        metadata={'type': 'str',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'comment included in the experiment'})
-    rx_freq: float = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'hertz',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'radar receiver frequency in Hz'})
-    tx_site_name: str = field(
-        default=None,
-        metadata={'type': 'str',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'name of the transmitter site'})
-    tx_site_lat_lon: np.ndarray((2,), dtype=float) = field(
-        default_factory=np.ndarray,
-        metadata={'type': 'float32',
-                  'units': 'degree',
-                  'shape': (2,),
-                  'version': __version__,
-                  'created': __created__,
-                  'description': '[latitude, longitude] global North-Easting coordinates of the transmitter site in degrees'})
-    tx_heading: float = field(
-        default_factory=float,
-        metadata={'type': 'float32',
-                  'units': 'degree',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'transmitter array boresight pointing direction in degrees East of North'})
-    rx_site_name: str = field(
-        default=None,
-        metadata={'type': 'str',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'name of the receiver site'})
-    rx_site_lat_lon: np.ndarray((2,), dtype=float) = field(
-        default_factory=np.ndarray,
-        metadata={'type': 'float32',
-                  'units': 'degree',
-                  'shape': (2,),
-                  'version': __version__,
-                  'created': __created__,
-                  'description': '[latitude, longitude] global North-Easting coordinates of the receiver site in degrees'})
-    rx_heading: float = field(
-        default_factory=float,
-        metadata={'type': 'float32',
-                  'units': 'degree',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'receiver array boresight pointing direction in degrees East of North'})
+    date: np.ndarray #((3,), dtype=int) = field(
+        # default=np.asarray([0, 0, 0], dtype=int),
+        # metadata={'type': 'int32',
+        #           'units': 'None',
+        #           'shape': (3,),
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'starting date of the data contained within'})
+    experiment_name: str #= field(
+        # default=None,
+        # metadata={'type': 'str',
+        #           'units': 'None',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'name of experiment ran (ex; normalscan, twofsound)'})
+    experiment_cpid: int #= field(
+        # default=None,
+        # metadata={'type': 'int32',
+        #           'units': 'None',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'control program id of experiment ran'})
+    # comment: str = field(
+    #     default=None,
+    #     metadata={'type': 'str',
+    #               'units': 'None',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'comment included in the experiment'})
+    rx_freq: float #= field(
+        # default=None,
+        # metadata={'type': 'float32',
+        #           'units': 'hertz',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'radar receiver frequency in Hz'})
+    tx_site_name: str #= field(
+        # default=None,
+        # metadata={'type': 'str',
+        #           'units': 'None',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'name of the transmitter site'})
+    # tx_site_lat_lon: np.ndarray((2,), dtype=float) = field(
+        # default_factory=np.ndarray,
+        # metadata={'type': 'float32',
+        #           'units': 'degree',
+        #           'shape': (2,),
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': '[latitude, longitude] global North-Easting coordinates of the transmitter site in degrees'})
+    # tx_heading: float = field(
+        # default_factory=float,
+        # metadata={'type': 'float32',
+        #           'units': 'degree',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'transmitter array boresight pointing direction in degrees East of North'})
+    rx_site_name: str #= field(
+        # default=None,
+        # metadata={'type': 'str',
+        #           'units': 'None',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': 'name of the receiver site'})
+    # rx_site_lat_lon: np.ndarray((2,), dtype=float) = field(
+    #     default_factory=np.ndarray,
+    #     metadata={'type': 'float32',
+    #               'units': 'degree',
+    #               'shape': (2,),
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': '[latitude, longitude] global North-Easting coordinates of the receiver site in degrees'})
+    # rx_heading: float = field(
+    #     default_factory=float,
+    #     metadata={'type': 'float32',
+    #               'units': 'degree',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'receiver array boresight pointing direction in degrees East of North'})
     rx_sample_rate: float = field(
         default=3333.33333,
         metadata={'type': 'float32',
@@ -138,6 +131,14 @@ class Info:
                   'version': __version__,
                   'created': __created__,
                   'description': 'the sample rate at the receiver in Hz'})
+    date_created: str = field(
+        default=__created__,
+        metadata={'type': 'str',
+                  'units': 'None',
+                  'shape': 19,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'the date and time this file was generated'})
 
     def __post_init__(self):
         rx_hdw = parse_hdw.Hdw.read_hdw_file(self.rx_site_name)
@@ -151,78 +152,123 @@ class Info:
 
 @dataclass
 class Data:
-    time: np.ndarray((), dtype=float) = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'second',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'start time of each sample in seconds since epoch'})
-    time_slices: np.ndarray((), dtype=int) = field(
-        default_factory=np.ndarray,
+    time: np.ndarray
+    location: np.ndarray
+    power_db: np.ndarray
+    velocity: np.ndarray
+    velocity_dir: np.ndarray
+    spectral_width: np.ndarray
+    groundscatter: np.ndarray
+    # time: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'second',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'start time of each sample in seconds since epoch'})
+    # location: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'degrees',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of geographic (latitude, longitude) of each data point'})
+    # power_db: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'dB',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of powers in dB'})
+    # velocity: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'meters per second',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of velocity magnitudes'})
+    # velocity_dir: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'degrees',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of velocity directions in degrees East of North'})
+    # spectral_width: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'meters per second',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of spectral widths'})
+    # groundscatter: np.ndarray = field(
+    #     # default=np.array([], dtype=np.int8),
+    #     metadata={'type': 'int8',
+    #               'units': 'None',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'groundscatter flag for each point'})
+    time_slices: np.ndarray = field(
+        init=False,
         metadata={'type': 'int',
                   'units': 'None',
                   'shape': None,
                   'version': __version__,
                   'created': __created__,
                   'description': '(start, stop) indices for each unique time'})
-    location: np.ndarray((), dtype=float) = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'degrees',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of geographic (latitude, longitude) of each data point'})
-    power_db: np.ndarray((), dtype=float) = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'dB',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of powers in dB'})
-    velocity: np.ndarray((), dtype=float) = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'meters per second',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of velocity magnitudes'})
-    velocity_dir: np.ndarray((), dtype=float) = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'degrees',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of velocity directions in degrees East of North'})
-    spectral_width: np.ndarray((), dtype=float) = field(
-        default=None,
-        metadata={'type': 'float32',
-                  'units': 'meters per second',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of spectral widths'})
-    groundscatter: np.ndarray((), dtype=int) = field(
-        default=None,
-        metadata={'type': 'int',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'groundscatter flag for each point'}
-    )
 
     def __post_init__(self):
         times, counts = np.unique(self.time, return_counts=True)
-        self.time_slices = np.zeros((len(times), 2), dtype=np.int32)
+        time_slices = np.empty((len(times), 2), dtype=np.int32)
         end_indices = np.cumsum(counts)
-        self.time_slices[:, 1] = end_indices
-        self.time_slices[1:, 0] = end_indices[:-1]
+        time_slices[:, 1] = end_indices
+        time_slices[1:, 0] = end_indices[:-1]
+        time_slices[0, 0] = 0
+        self.time_slices = time_slices
+
+    @classmethod
+    def create_from_records(cls, records):
+        """
+        Instantiates the Data class with the contents of records.
+
+        Parameters
+        ----------
+        records: list
+            List of geolocated record dictionaries.
+
+        Returns
+        -------
+        Data
+            Data object with the relevant parameters from records
+        """
+        lists = collections.defaultdict(list)
+        for rec in records:
+            lists['time'].append([rec['timestamp'].timestamp()] * len(rec['v']))
+            lists['location'].append(rec['scatter_location'])
+            lists['power_db'].append(rec['p_l'])
+            lists['velocity'].append(rec['v'])
+            lists['velocity_dir'].append(rec['look_dir'])
+            lists['spectral_width'].append(rec['w_l'])
+            lists['groundscatter'].append(rec['gsct'])
+
+        t = np.concatenate(lists['time'], dtype=np.float32)
+        print(type(t))
+        print(t.shape)
+        return Data(time=t,
+                    location=np.concatenate(lists['location']),
+                    power_db=np.concatenate(lists['power_db']),
+                    velocity=np.concatenate(lists['velocity']),
+                    velocity_dir=np.concatenate(lists['velocity_dir']),
+                    spectral_width=np.concatenate(lists['spectral_width']),
+                    groundscatter=np.concatenate(lists['groundscatter']))
+
 
     # rf_distance: np.ndarray
     # snr_db: np.ndarray
@@ -298,20 +344,20 @@ class Container:
               f'{"    Description":<}\n' \
               f'{"=" * 200}\n'
         for x in fields(self.info):
-            msg += f'{"info." + x.name:<30} | ' \
-                   f'{x.metadata["units"]:^20} | ' \
-                   f'{x.metadata["type"]:^15} | ' \
-                   f'{str(x.metadata["shape"]):^15} | ' \
-                   f'{x.metadata["version"]:^5} | ' \
-                   f'{x.metadata["created"]:^20} | ' \
-                   f'{x.metadata["description"]:<}\n'
+            msg += f'{"info." + x.name:<30} | \n' \
+                   # f'{x.metadata["units"]:^20} | ' \
+                   # f'{x.metadata["type"]:^15} | ' \
+                   # f'{str(x.metadata["shape"]):^15} | ' \
+                   # f'{x.metadata["version"]:^5} | ' \
+                   # f'{x.metadata["created"]:^20} | ' \
+                   # f'{x.metadata["description"]:<}\n'
         for x in fields(self.data):
-            msg += f'{"data." + x.name:<30} | ' \
-                   f'{x.metadata["units"]:^20} | ' \
-                   f'{x.metadata["type"]:^15} | ' \
-                   f'{str(x.metadata["shape"]):^15} | ' \
-                   f'{x.metadata["version"]:^5} | ' \
-                   f'{x.metadata["description"]:<}\n'
+            msg += f'{"data." + x.name:<30} | \n' \
+                   # f'{x.metadata["units"]:^20} | ' \
+                   # f'{x.metadata["type"]:^15} | ' \
+                   # f'{str(x.metadata["shape"]):^15} | ' \
+                   # f'{x.metadata["version"]:^5} | ' \
+                   # f'{x.metadata["description"]:<}\n'
         # for x in fields(self.dev):
         #     msg += f'{"dev."+x.name:<30} | ' \
         # f'{x.metadata["units"]:^20} | ' \

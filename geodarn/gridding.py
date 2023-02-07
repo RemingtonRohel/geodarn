@@ -67,18 +67,19 @@ def create_grid_records(geo_records, lat_min=50, lat_width=1.0, hemisphere='nort
 
 
 if __name__ == '__main__':
+    import os
     lat_divs_bottom, lon_divs, grid = create_grid(lat_min=55, lat_width=1.0)
     fig = plt.figure(figsize=[5, 5])
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.NorthPolarStereo(central_longitude=-100))
     ax.set_extent([-180, 180, 40, 90], ccrs.PlateCarree())
-    ax.coastlines(zorder=5, alpha=0.2)
+    ax.coastlines(zorder=5, alpha=0.4)
     ax.gridlines()
 
     for lat_idx in range(grid.shape[0]):
-        ax.scatter(x=grid[lat_idx, :, 1], y=grid[lat_idx, :, 0], transform=ccrs.PlateCarree(), color='k', alpha=0.5,
-                   s=2)
+        ax.scatter(x=grid[lat_idx, :, 1], y=grid[lat_idx, :, 0], transform=ccrs.PlateCarree(),
+                   color='k', alpha=0.2, s=2)
 
-    geo_records = file_ops.read_geodarn_file('/home/remington/geodarn/geodarn_test.hdf5')
+    geo_records = file_ops.read_geodarn_file(f'{os.path.dirname(__file__)}/geodarn_test.hdf5')
 
     timestamps = sorted(list(geo_records['records'].keys()))
     rx_site = geo_records['records'][timestamps[0]]['rx_site']
@@ -89,7 +90,7 @@ if __name__ == '__main__':
 
     # Plot the data on a map
     record = geo_records['records'][timestamps[0]]
-    plotting.plot_single_param_from_scan(fig, ax, record, 'power', label='Power [dB]', site_ids=site_ids)
+    plotting.plot_single_param_from_scan(fig, ax, record, 'velocity', label='Velocity [m/s]', site_ids=site_ids, stem=True)
 
     plt.show()
     plt.close()
