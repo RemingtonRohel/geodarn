@@ -1,7 +1,5 @@
 import argparse
 
-import numpy as np
-
 # Imports from local files
 import geolocation as gl
 import file_ops
@@ -36,24 +34,11 @@ def process_fitacf_file(infile, outfile, tx_site, rx_site):
         if result is not None:
             geo_records.append(result)
 
-    data = formats.Data.create_from_records(geo_records)
-    info = formats.Info(date=np.array([geo_records[0]['timestamp'].year,
-                                       geo_records[0]['timestamp'].month,
-                                       geo_records[0]['timestamp'].day], dtype=int),
-                        experiment_cpid = records[0]['cp'],
-                        experiment_name=records[0]['combf'],
-                        tx_site_name=tx_site,
-                        rx_site_name=rx_site,
-                        rx_freq = records[0]['tfreq'])
-    print(info)
-    print(data)
-    container = formats.Container(info=info, data=data)
+    container = formats.Container.create_from_records(geo_records, tx_site, rx_site)
 
-    container.show()
     print(f'Writing results to file {outfile}')
-    container.dataclass_to_hdf5()
+    container.dataclass_to_hdf5(outfile)
 
-    # file_ops.write_geographic_scatter(geo_records, outfile, rx_site, tx_site)
 
 
 if __name__ == '__main__':

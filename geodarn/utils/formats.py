@@ -152,77 +152,77 @@ class Info:
 
 @dataclass
 class Data:
-    # time: np.ndarray
-    # location: np.ndarray
-    # power_db: np.ndarray
-    # velocity: np.ndarray
-    # velocity_dir: np.ndarray
-    # spectral_width: np.ndarray
-    # groundscatter: np.ndarray
-    time: np.ndarray = field(
-        # default=np.array([], dtype=np.float32),
-        metadata={'type': 'float32',
-                  'units': 'second',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'start time of each sample in seconds since epoch'})
-    location: np.ndarray = field(
-        # default=np.array([], dtype=np.float32),
-        metadata={'type': 'float32',
-                  'units': 'degrees',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of geographic (latitude, longitude) of each data point'})
-    power_db: np.ndarray = field(
-        # default=np.array([], dtype=np.float32),
-        metadata={'type': 'float32',
-                  'units': 'dB',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of powers in dB'})
-    velocity: np.ndarray = field(
-        # default=np.array([], dtype=np.float32),
-        metadata={'type': 'float32',
-                  'units': 'meters per second',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of velocity magnitudes'})
-    velocity_dir: np.ndarray = field(
-        # default=np.array([], dtype=np.float32),
-        metadata={'type': 'float32',
-                  'units': 'degrees',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of velocity directions in degrees East of North'})
-    spectral_width: np.ndarray = field(
-        # default=np.array([], dtype=np.float32),
-        metadata={'type': 'float32',
-                  'units': 'meters per second',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'array of spectral widths'})
-    groundscatter: np.ndarray = field(
-        # default=np.array([], dtype=np.int8),
-        metadata={'type': 'int8',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': 'groundscatter flag for each point'})
+    time: np.ndarray
+    location: np.ndarray
+    power_db: np.ndarray
+    velocity: np.ndarray
+    velocity_dir: np.ndarray
+    spectral_width: np.ndarray
+    groundscatter: np.ndarray
+    # time: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'second',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'start time of each sample in seconds since epoch'})
+    # location: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'degrees',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of geographic (latitude, longitude) of each data point'})
+    # power_db: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'dB',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of powers in dB'})
+    # velocity: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'meters per second',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of velocity magnitudes'})
+    # velocity_dir: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'degrees',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of velocity directions in degrees East of North'})
+    # spectral_width: np.ndarray = field(
+    #     # default=np.array([], dtype=np.float32),
+    #     metadata={'type': 'float32',
+    #               'units': 'meters per second',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'array of spectral widths'})
+    # groundscatter: np.ndarray = field(
+    #     # default=np.array([], dtype=np.int8),
+    #     metadata={'type': 'int8',
+    #               'units': 'None',
+    #               'shape': None,
+    #               'version': __version__,
+    #               'created': __created__,
+    #               'description': 'groundscatter flag for each point'})
     time_slices: np.ndarray = field(
-        init=False,
-        metadata={'type': 'int',
-                  'units': 'None',
-                  'shape': None,
-                  'version': __version__,
-                  'created': __created__,
-                  'description': '(start, stop) indices for each unique time'})
+        init=False)#,
+        # metadata={'type': 'int',
+        #           'units': 'None',
+        #           'shape': None,
+        #           'version': __version__,
+        #           'created': __created__,
+        #           'description': '(start, stop) indices for each unique time'})
 
     def __post_init__(self):
         times, counts = np.unique(self.time, return_counts=True)
@@ -268,31 +268,14 @@ class Data:
                     velocity_dir=np.concatenate(lists['velocity_dir']),
                     spectral_width=np.concatenate(lists['spectral_width']),
                     groundscatter=np.concatenate(lists['groundscatter']))
-
-
-    # rf_distance: np.ndarray
-    # snr_db: np.ndarray
-    # doppler_shift: np.ndarray
-    # spectra: np.ndarray
-    # spectra_variance: np.ndarray
-    # xspectra: np.ndarray
-    # xspectra_variance: np.ndarray
-    # latitude: np.ndarray
-    # longitude: np.ndarray
-    # altitude: np.ndarray
-    # azimuth: np.ndarray
-    # elevation: np.ndarray
-    # slant_range: np.ndarray
-    # velocity_azimuth: np.ndarray
-    # velocity_elevation: np.ndarray
-    # velocity_magnitude: np.ndarray
-    # # Per second but for all range-Doppler bins
-    # avg_spectra_noise: np.ndarray
-    # spectra_noise: np.ndarray
-    # xspectra_noise: np.ndarray
-    # spectra_clutter_corr: np.ndarray
-    # xspectra_clutter_corr: np.ndarray
-    # data_flag: np.ndarray
+        Info(date=np.array([records[0]['timestamp'].year,
+                            records[0]['timestamp'].month,
+                            records[0]['timestamp'].day], dtype=int),
+             experiment_cpid=records[0]['cp'],
+             experiment_name=records[0]['combf'],
+             tx_site_name=tx_site,
+             rx_site_name=rx_site,
+             rx_freq=records[0]['tfreq'])
 
 
 # @dataclass(kw_only=True, slots=True)
@@ -321,87 +304,198 @@ class Data:
 
 @dataclass
 class Container:
-    info: Info = field(default_factory=Info)
-    data: Data = field(default_factory=Data)
+    date: np.ndarray = field(
+        metadata={'group': 'info',
+                  'units': 'None'})
+    experiment_name: str = field(
+        metadata={'group': 'info',
+                  'units': 'None'})
+    experiment_cpid: int = field(
+        metadata={'group': 'info',
+                  'units': 'None'})
+    rx_freq: float = field(
+        metadata={'group': 'info',
+                  'units': 'kHz'})
+    tx_site_name: str = field(
+        metadata={'group': 'info',
+                  'units': 'None'})
+    rx_site_name: str = field(
+        metadata={'group': 'info',
+                  'units': 'None'})
+    time: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'seconds'})
+    location: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'degrees'})
+    power_db: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'dB'})
+    velocity: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'm/s'})
+    velocity_dir: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'degrees'})
+    spectral_width: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'm/s'})
+    groundscatter: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'None'})
+    rx_sample_rate: float = field(
+        default=3333.33333,
+        metadata={'group': 'info',
+                  'units': 'Hz'})
+    date_created: str = field(
+        default=__created__,
+        metadata={'group': 'info',
+                  'units': 'None'})
+    time_slices: np.ndarray = field(
+        init=False,
+        metadata={'group': 'data',
+                  'units': 'None'})
+    rx_site_lat_lon: np.ndarray = field(
+        init=False,
+        metadata={'group': 'info',
+                  'units': 'degrees'})
+    rx_heading: float = field(
+        init=False,
+        metadata={'group': 'info',
+                  'units': 'degrees'})
+    tx_site_lat_lon: np.ndarray = field(
+        init=False,
+        metadata={'group': 'info',
+                  'units': 'degrees'})
+    tx_heading: float = field(
+        init=False,
+        metadata={'group': 'info',
+                  'units': 'degrees'})
 
+    def __post_init__(self):
+        times, counts = np.unique(self.time, return_counts=True)
+        time_slices = np.empty((len(times), 2), dtype=np.int32)
+        end_indices = np.cumsum(counts)
+        time_slices[:, 1] = end_indices
+        time_slices[1:, 0] = end_indices[:-1]
+        time_slices[0, 0] = 0
+        self.time_slices = time_slices
+
+        rx_hdw = parse_hdw.Hdw.read_hdw_file(self.rx_site_name)
+        tx_hdw = parse_hdw.Hdw.read_hdw_file(self.tx_site_name)
+        self.rx_site_lat_lon = np.array(rx_hdw.location[:2])
+        self.rx_heading = rx_hdw.boresight_direction
+        self.tx_site_lat_lon = np.array(tx_hdw.location[:2])
+        self.tx_heading = tx_hdw.boresight_direction
+
+
+    # info: Info = field(default_factory=Info, init=False)
+    # data: Data = field(default_factory=Data, init=False)
     # dev: Dev = field(default_factory=Dev)
     # conf: Config = field(default_factory=Config)
 
-    def __repr__(self):
-        return f'info: {self.info!r}\n' \
-               f'data: {self.data!r}\n' #\
-               # f'dev: {self.dev!r}\n' \
-               # f'dev: {self.conf!r}'
+    # def __repr__(self):
+    #     return f'info: {self.info!r}\n' \
+    #            f'data: {self.data!r}\n' #\
+    #            # f'dev: {self.dev!r}\n' \
+    #            # f'dev: {self.conf!r}'
 
-    def show(self):
-        msg = f'{"=" * 200}\n' \
-              f'{"Dataset":^30} | ' \
-              f'{"Units":^20} | ' \
-              f'{"Type":^15} | ' \
-              f'{"Shape":^15} | ' \
-              f'{"Ver":^5} | ' \
-              f'{"Created":^20} | ' \
-              f'{"    Description":<}\n' \
-              f'{"=" * 200}\n'
-        for x in fields(self.info):
-            msg += f'{"info." + x.name:<30} | \n' \
-                   # f'{x.metadata["units"]:^20} | ' \
-                   # f'{x.metadata["type"]:^15} | ' \
-                   # f'{str(x.metadata["shape"]):^15} | ' \
-                   # f'{x.metadata["version"]:^5} | ' \
-                   # f'{x.metadata["created"]:^20} | ' \
-                   # f'{x.metadata["description"]:<}\n'
-        for x in fields(self.data):
-            msg += f'{"data." + x.name:<30} | \n' \
-                   # f'{x.metadata["units"]:^20} | ' \
-                   # f'{x.metadata["type"]:^15} | ' \
-                   # f'{str(x.metadata["shape"]):^15} | ' \
-                   # f'{x.metadata["version"]:^5} | ' \
-                   # f'{x.metadata["description"]:<}\n'
-        # for x in fields(self.dev):
-        #     msg += f'{"dev."+x.name:<30} | ' \
-        # f'{x.metadata["units"]:^20} | ' \
-        # f'{x.metadata["type"]:^15} | ' \
-        # f'{str(x.metadata["shape"]):^15} | ' \
-        # f'{x.metadata["version"]:^5} | ' \
-        # f'{x.metadata["description"]:<}\n'
-        return msg
+    # def show(self):
+    #     msg = f'{"=" * 200}\n' \
+    #           f'{"Dataset":^30} | ' \
+    #           f'{"Units":^20} | ' \
+    #           f'{"Type":^15} | ' \
+    #           f'{"Shape":^15} | ' \
+    #           f'{"Ver":^5} | ' \
+    #           f'{"Created":^20} | ' \
+    #           f'{"    Description":<}\n' \
+    #           f'{"=" * 200}\n'
+    #     for x in fields(self.info):
+    #         msg += f'{"info." + x.name:<30} | \n' \
+    #                # f'{x.metadata["units"]:^20} | ' \
+    #                # f'{x.metadata["type"]:^15} | ' \
+    #                # f'{str(x.metadata["shape"]):^15} | ' \
+    #                # f'{x.metadata["version"]:^5} | ' \
+    #                # f'{x.metadata["created"]:^20} | ' \
+    #                # f'{x.metadata["description"]:<}\n'
+    #     for x in fields(self.data):
+    #         msg += f'{"data." + x.name:<30} | \n' \
+    #                # f'{x.metadata["units"]:^20} | ' \
+    #                # f'{x.metadata["type"]:^15} | ' \
+    #                # f'{str(x.metadata["shape"]):^15} | ' \
+    #                # f'{x.metadata["version"]:^5} | ' \
+    #                # f'{x.metadata["description"]:<}\n'
+    #     # for x in fields(self.dev):
+    #     #     msg += f'{"dev."+x.name:<30} | ' \
+    #     # f'{x.metadata["units"]:^20} | ' \
+    #     # f'{x.metadata["type"]:^15} | ' \
+    #     # f'{str(x.metadata["shape"]):^15} | ' \
+    #     # f'{x.metadata["version"]:^5} | ' \
+    #     # f'{x.metadata["description"]:<}\n'
+    #     return msg
 
     @classmethod
-    def dataclass_to_hdf5(cls, path=''):
-        f = h5py.File(path + 'temp.hdf5', 'w')
+    def create_from_records(cls, records, tx_site, rx_site):
+        """
+        Instantiates the Data class with the contents of records.
 
-        def loop(k, n=''):
-            for a in fields(k):
-                key = a.name
-                print(n + key)
-                try:
-                    print('\tattribute?')
-                    value = getattr(k, a.name)
-                except AttributeError as err:
-                    print('\t\t-> no')
-                    if a.name in ['info', 'data', 'dev']:
-                        pass
-                    else:
-                        raise AttributeError(f'Attribute {a.name} has no Value')
-                if is_dataclass(a):
-                    print('\tis dataclass')
-                    dset = a.name + '/'
-                    loop(value, dset)
-                else:
-                    if n != '':
-                        if type(value) is str:
-                            value = np.asarray(value, dtype='S')
-                        else:
-                            value = np.asarray(value)
-                        print(n + key)
-                        f.create_dataset(n + key, data=value)
-                        for kee, vaa in a.metadata.items():
-                            f[n + key].attrs[kee] = vaa
+        Parameters
+        ----------
+        records: list
+            List of geolocated record dictionaries.
+        tx_site: str
+            Three-letter code of transmitting radar site.
+        rx_site: str
+            Three-letter code of receiving radar site.
 
-        loop(cls)
+        Returns
+        -------
+        Container
+            Container object with the relevant parameters from records
+        """
+        lists = collections.defaultdict(list)
+        for rec in records:
+            lists['time'].append(np.repeat(np.float64(rec['timestamp'].timestamp()), len(rec['v'])))
+            lists['location'].append(rec['scatter_location'])
+            lists['power_db'].append(rec['p_l'])
+            lists['velocity'].append(rec['v'])
+            lists['velocity_dir'].append(rec['look_dir'])
+            lists['spectral_width'].append(rec['w_l'])
+            lists['groundscatter'].append(rec['gsct'])
 
-        f = h5py.File(path + 'temp.hdf5', 'r')
+        return Container(time=np.concatenate(lists['time']),
+                         location=np.concatenate(lists['location']),
+                         power_db=np.concatenate(lists['power_db']),
+                         velocity=np.concatenate(lists['velocity']),
+                         velocity_dir=np.concatenate(lists['velocity_dir']),
+                         spectral_width=np.concatenate(lists['spectral_width']),
+                         groundscatter=np.concatenate(lists['groundscatter']),
+                         date=np.array([records[0]['timestamp'].year,
+                                        records[0]['timestamp'].month,
+                                        records[0]['timestamp'].day], dtype=int),
+                         experiment_cpid=records[0]['cp'],
+                         experiment_name=records[0]['combf'],
+                         tx_site_name=tx_site,
+                         rx_site_name=rx_site,
+                         rx_freq=records[0]['tfreq'])
+
+    def dataclass_to_hdf5(self, outfile):
+        f = h5py.File(outfile, 'w')
+
+        for x in fields(self):
+            key = x.name
+            path = f'{x.metadata.get("group")}/{key}'
+            value = getattr(self, key)
+            if type(value) is str:
+                value = np.asarray(value, dtype='S')
+            else:
+                value = np.asarray(value)
+            f.create_dataset(path, data=value)
+            for k, v in x.metadata.items():
+                if k != 'group':
+                    f[path].attrs[k] = v
+
+        f = h5py.File(outfile, 'r')
         print(f.items())
 
         def _print_attrs(name, obj):
@@ -414,7 +508,8 @@ class Container:
 
         return
 
-    def hdf5_to_dataclass(file: str):
+    @staticmethod
+    def hdf5_to_dataclass(infile: str):
         pass
         return
 
