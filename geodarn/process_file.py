@@ -45,7 +45,8 @@ def process_fitacf_file(infile, outfile, tx_site, rx_site):
                         tx_site_name=tx_site,
                         rx_site_name=rx_site,
                         rx_freq = records[0]['tfreq'])
-
+    print(info)
+    print(data)
     container = formats.Container(info=info, data=data)
 
     container.show()

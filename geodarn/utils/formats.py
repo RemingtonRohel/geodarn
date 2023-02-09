@@ -3,7 +3,7 @@ Dataclass containers for ICEBEAR-3D data processing and HDF5 data packing.
 """
 import os
 import re
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, is_dataclass
 import numpy as np
 import h5py
 import datetime
@@ -152,69 +152,69 @@ class Info:
 
 @dataclass
 class Data:
-    time: np.ndarray
-    location: np.ndarray
-    power_db: np.ndarray
-    velocity: np.ndarray
-    velocity_dir: np.ndarray
-    spectral_width: np.ndarray
-    groundscatter: np.ndarray
-    # time: np.ndarray = field(
-    #     # default=np.array([], dtype=np.float32),
-    #     metadata={'type': 'float32',
-    #               'units': 'second',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'start time of each sample in seconds since epoch'})
-    # location: np.ndarray = field(
-    #     # default=np.array([], dtype=np.float32),
-    #     metadata={'type': 'float32',
-    #               'units': 'degrees',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'array of geographic (latitude, longitude) of each data point'})
-    # power_db: np.ndarray = field(
-    #     # default=np.array([], dtype=np.float32),
-    #     metadata={'type': 'float32',
-    #               'units': 'dB',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'array of powers in dB'})
-    # velocity: np.ndarray = field(
-    #     # default=np.array([], dtype=np.float32),
-    #     metadata={'type': 'float32',
-    #               'units': 'meters per second',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'array of velocity magnitudes'})
-    # velocity_dir: np.ndarray = field(
-    #     # default=np.array([], dtype=np.float32),
-    #     metadata={'type': 'float32',
-    #               'units': 'degrees',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'array of velocity directions in degrees East of North'})
-    # spectral_width: np.ndarray = field(
-    #     # default=np.array([], dtype=np.float32),
-    #     metadata={'type': 'float32',
-    #               'units': 'meters per second',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'array of spectral widths'})
-    # groundscatter: np.ndarray = field(
-    #     # default=np.array([], dtype=np.int8),
-    #     metadata={'type': 'int8',
-    #               'units': 'None',
-    #               'shape': None,
-    #               'version': __version__,
-    #               'created': __created__,
-    #               'description': 'groundscatter flag for each point'})
+    # time: np.ndarray
+    # location: np.ndarray
+    # power_db: np.ndarray
+    # velocity: np.ndarray
+    # velocity_dir: np.ndarray
+    # spectral_width: np.ndarray
+    # groundscatter: np.ndarray
+    time: np.ndarray = field(
+        # default=np.array([], dtype=np.float32),
+        metadata={'type': 'float32',
+                  'units': 'second',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'start time of each sample in seconds since epoch'})
+    location: np.ndarray = field(
+        # default=np.array([], dtype=np.float32),
+        metadata={'type': 'float32',
+                  'units': 'degrees',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'array of geographic (latitude, longitude) of each data point'})
+    power_db: np.ndarray = field(
+        # default=np.array([], dtype=np.float32),
+        metadata={'type': 'float32',
+                  'units': 'dB',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'array of powers in dB'})
+    velocity: np.ndarray = field(
+        # default=np.array([], dtype=np.float32),
+        metadata={'type': 'float32',
+                  'units': 'meters per second',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'array of velocity magnitudes'})
+    velocity_dir: np.ndarray = field(
+        # default=np.array([], dtype=np.float32),
+        metadata={'type': 'float32',
+                  'units': 'degrees',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'array of velocity directions in degrees East of North'})
+    spectral_width: np.ndarray = field(
+        # default=np.array([], dtype=np.float32),
+        metadata={'type': 'float32',
+                  'units': 'meters per second',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'array of spectral widths'})
+    groundscatter: np.ndarray = field(
+        # default=np.array([], dtype=np.int8),
+        metadata={'type': 'int8',
+                  'units': 'None',
+                  'shape': None,
+                  'version': __version__,
+                  'created': __created__,
+                  'description': 'groundscatter flag for each point'})
     time_slices: np.ndarray = field(
         init=False,
         metadata={'type': 'int',
@@ -369,19 +369,23 @@ class Container:
 
     @classmethod
     def dataclass_to_hdf5(cls, path=''):
-        f = h5py.File(path + 'geodarn_temp.hdf5', 'w')
+        f = h5py.File(path + 'temp.hdf5', 'w')
 
         def loop(k, n=''):
             for a in fields(k):
                 key = a.name
+                print(n + key)
                 try:
+                    print('\tattribute?')
                     value = getattr(k, a.name)
                 except AttributeError as err:
+                    print('\t\t-> no')
                     if a.name in ['info', 'data', 'dev']:
                         pass
                     else:
                         raise AttributeError(f'Attribute {a.name} has no Value')
-                if a.type is type:
+                if is_dataclass(a):
+                    print('\tis dataclass')
                     dset = a.name + '/'
                     loop(value, dset)
                 else:
@@ -397,7 +401,7 @@ class Container:
 
         loop(cls)
 
-        f = h5py.File(path + 'geodarn_temp.hdf5', 'r')
+        f = h5py.File(path + 'temp.hdf5', 'r')
         print(f.items())
 
         def _print_attrs(name, obj):
