@@ -306,71 +306,91 @@ class Data:
 class Container:
     date: np.ndarray = field(
         metadata={'group': 'info',
-                  'units': 'None'})
-    experiment_name: str = field(
+                  'units': 'None',
+                  'description': 'Date as [year, month, day] for when the data is from'})
+    comment: str = field(
         metadata={'group': 'info',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Any extra information about the file'})
     experiment_cpid: int = field(
         metadata={'group': 'info',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Control program ID of the experiment'})
     rx_freq: float = field(
         metadata={'group': 'info',
-                  'units': 'kHz'})
+                  'units': 'kHz',
+                  'description': 'Operating frequency of the receiver radar'})
     tx_site_name: str = field(
         metadata={'group': 'info',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Three-letter code of the transmitting radar'})
     rx_site_name: str = field(
         metadata={'group': 'info',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Three-letter code of the receiving radar'})
     time: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'seconds'})
+                  'units': 'seconds',
+                  'description': 'Array of size [num_points] of timestamps'})
     location: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'degrees'})
+                  'units': 'degrees',
+                  'description': 'Array of size [num_points, 2] of [lat, lon] locations of scatter'})
     power_db: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'dB'})
+                  'units': 'dB',
+                  'description': 'Array of size [num_points] of the scatter power'})
     velocity: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'm/s'})
+                  'units': 'm/s',
+                  'description': 'Array of size [num_points] of the scatter velocity'})
     velocity_dir: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'degrees'})
+                  'units': 'degrees',
+                  'description': 'Array of size [num_points] of velocity directions CW of North'})
     spectral_width: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'm/s'})
+                  'units': 'm/s',
+                  'description': 'Array of size [num_points] of spectral width'})
     groundscatter: np.ndarray = field(
         metadata={'group': 'data',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Array of size [num_points] of flags for groundscatter'})
     rx_sample_rate: float = field(
         default=3333.33333,
         metadata={'group': 'info',
-                  'units': 'Hz'})
+                  'units': 'Hz',
+                  'description': 'Final sampling rate of the raw data'})
     date_created: str = field(
         default=__created__,
         metadata={'group': 'info',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Date when this file was created'})
     time_slices: np.ndarray = field(
         init=False,
         metadata={'group': 'data',
-                  'units': 'None'})
+                  'units': 'None',
+                  'description': 'Indices corresponding to unique times in the "time" array'})
     rx_site_lat_lon: np.ndarray = field(
         init=False,
         metadata={'group': 'info',
-                  'units': 'degrees'})
+                  'units': 'degrees',
+                  'description': 'Location of receiving radar as [lat, lon]'})
     rx_heading: float = field(
         init=False,
         metadata={'group': 'info',
-                  'units': 'degrees'})
+                  'units': 'degrees',
+                  'description': 'Forward look direction of receiving radar in degrees CW of North'})
     tx_site_lat_lon: np.ndarray = field(
         init=False,
         metadata={'group': 'info',
-                  'units': 'degrees'})
+                  'units': 'degrees',
+                  'description': 'Location of transmitting radar as [lat, lon]'})
     tx_heading: float = field(
         init=False,
         metadata={'group': 'info',
-                  'units': 'degrees'})
+                  'units': 'degrees',
+                  'description': 'Forward look direction of transmitting radar in degrees CW of North'})
 
     def __post_init__(self):
         times, counts = np.unique(self.time, return_counts=True)
@@ -474,7 +494,7 @@ class Container:
                                         records[0]['timestamp'].month,
                                         records[0]['timestamp'].day], dtype=int),
                          experiment_cpid=records[0]['cp'],
-                         experiment_name=records[0]['combf'],
+                         comment=records[0]['combf'],
                          tx_site_name=tx_site,
                          rx_site_name=rx_site,
                          rx_freq=records[0]['tfreq'])
@@ -490,7 +510,11 @@ class Container:
                 value = np.asarray(value, dtype='S')
             else:
                 value = np.asarray(value)
-            f.create_dataset(path, data=value)
+            if value.size == 1:
+                compression = None
+            else:
+                compression = 'gzip'
+            f.create_dataset(path, data=value, compression=compression)
             for k, v in x.metadata.items():
                 if k != 'group':
                     f[path].attrs[k] = v
