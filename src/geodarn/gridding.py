@@ -3,7 +3,6 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 
 import plotting
-import file_ops
 
 
 def create_grid(lat_min=50, lat_width=1., hemisphere='north'):

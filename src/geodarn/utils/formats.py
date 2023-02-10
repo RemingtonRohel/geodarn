@@ -3,13 +3,14 @@ Dataclass containers for ICEBEAR-3D data processing and HDF5 data packing.
 """
 import os
 import re
-from dataclasses import dataclass, field, fields, is_dataclass
+from dataclasses import dataclass, field, fields
 import numpy as np
 import h5py
 import datetime
 import collections
 
-from utils import parse_hdw
+from src.geodarn import parse_hdw
+
 
 def version():
     here = os.path.abspath(os.path.dirname(__file__))

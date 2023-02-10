@@ -1,6 +1,5 @@
 import os
 import copy
-import warnings
 
 import shapely.geometry
 import numpy as np
@@ -10,10 +9,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 
-from utils import parse_hdw
+from src.geodarn import parse_hdw
 from utils.constants import sites
 import geolocation as gl
-import file_ops
 
 
 def azimuthal_lines(site, min_range, max_range, beam_width=3.24, elevation=0.0):

@@ -1,10 +1,11 @@
 import argparse
 
 # Imports from local files
-import geolocation as gl
-import file_ops
-import extract_records as extraction
-from utils import formats
+import pydarnio
+
+from . import geolocation as gl
+from . import extract_records as extraction
+from .utils import formats
 
 
 def process_fitacf_file(infile, outfile, tx_site, rx_site):
@@ -23,7 +24,8 @@ def process_fitacf_file(infile, outfile, tx_site, rx_site):
         Three-letter radar code for the receiver site. Lowercase letters.
     """
     print(f'Reading file {infile}')
-    records = file_ops.read_fitacf(infile)
+    sdarn_read = pydarnio.SDarnRead(infile)
+    records = sdarn_read.read_fitacf()
     print(f'Grouping {len(records)} records by timestamp')
     merged_records = extraction.merge_simultaneous_records(records)
     print(f'Geolocating scatter in all {len(merged_records)} merged records')
