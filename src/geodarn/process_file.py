@@ -4,8 +4,7 @@ import argparse
 import pydarnio
 
 from . import geolocation as gl
-from . import extract_records as extraction
-from .utils import formats
+from .utils import formats, extract_records as extraction
 
 
 def process_fitacf_file(infile, outfile, tx_site, rx_site):
