@@ -138,13 +138,17 @@ def merge_simultaneous_records(records):
         merged_record = collections.defaultdict(list)
 
         for k in group[0].keys():
-            # Add all fields common across the simultaneous records
-            if k in fitacf.scan_specific_scalars:
-                merged_record[k] = group[0][k]
-            elif k in fitacf.scan_specific_vectors:
-                merged_record[k] = group[0][k]
-
             # Add all fields unique to each record in the scan
+            if k in fitacf.record_specific_vectors:
+                for rec in group:
+                    try:
+                        merged_record[k].append(rec[k])
+                    except KeyError:    # There was no data for the record
+                        pass
+                if len(merged_record[k]) != 0:
+                    merged_record[k] = np.concatenate(merged_record[k])
+                else:
+                    merged_record[k] = np.array([])
             elif k in fitacf.record_specific_scalars:
                 for rec in group:
                     try:
@@ -152,11 +156,16 @@ def merge_simultaneous_records(records):
                     except KeyError:
                         # There was no data for the record. Continue
                         pass
-                merged_record[k] = np.concatenate(merged_record[k])
-            elif k in fitacf.record_specific_vectors:
-                for rec in group:
-                    merged_record[k].append(rec[k])
-                merged_record[k] = np.concatenate(merged_record[k])
+                if len(merged_record[k]) != 0:
+                    merged_record[k] = np.concatenate(merged_record[k])
+                else:
+                    merged_record[k] = []
+
+            # Add all fields common across the simultaneous records
+            elif k in fitacf.scan_specific_scalars:
+                merged_record[k] = group[0][k]
+            elif k in fitacf.scan_specific_vectors:
+                merged_record[k] = group[0][k]
 
             # Unknown quantity
             else:
