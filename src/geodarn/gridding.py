@@ -2,8 +2,6 @@ import numpy as np
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 
-import plotting
-
 
 def create_grid(lat_min=50, lat_width=1., hemisphere='north'):
     """
@@ -59,7 +57,7 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
 
     Parameters
     ----------
-    located: Located
+    located: Container
         Dataclass storing the geolocated points
     lat_min: int
         Lower latitude boundary for the grid.
@@ -101,35 +99,35 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
 
 
 if __name__ == '__main__':
-    from utils.formats import Located, Gridded
+    from geodarn.formats import Container
     fig = plt.figure(figsize=[5, 5])
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.NorthPolarStereo(central_longitude=-100))
     ax.set_extent([-180, 180, 40, 90], ccrs.PlateCarree())
     ax.coastlines(zorder=5, alpha=0.4)
     ax.gridlines()
 
-    container = Located.hdf5_to_dataclass('/data/special_experiments/202301/bistatic/cly/fitacf/20230110.0000.37.cly.located.hdf5')
-    tx_site = container.tx_site_name
-    rx_site = container.rx_site_name
+    gridded = Container.hdf5_to_dataclass('/home/remington/repos/geodarn/20230110.1800.00.inv.gridded.hdf5')
+    tx_site = gridded.tx_site_name
+    rx_site = gridded.rx_site_name
     site_ids = [tx_site, rx_site]
 
-    indices = container.time_slices[10]
+    indices = gridded.time_slices[1]
     slice_obj = slice(indices[0], indices[1])
     
     # Plot the data on a map
     # plotting.plot_single_param_from_scan(fig, ax, container, slice_obj, 'velocity', label='Velocity [m/s]',
     #                                      site_ids=site_ids, stem=True)
 
-    indices_in_grid, grid = create_grid_records(container)
+    # indices_in_grid, grid = create_grid_records(gridded)
 
-    single_scan_indices = indices_in_grid[slice_obj]
+    single_scan_indices = gridded.location_idx[slice_obj]
 
     for (lat, lon) in single_scan_indices:
-        ax.scatter(x=grid[lat, lon, 1], y=grid[lat, lon, 0], transform=ccrs.PlateCarree(),
+        ax.scatter(x=gridded.location[lat, lon, 1], y=gridded.location[lat, lon, 0], transform=ccrs.PlateCarree(),
                    color='k', alpha=0.2, s=2)
 
     plt.show()
     plt.close()
 
-    gridded = Gridded.create_from_located(container)
+    # gridded.dataclass_to_hdf5('/home/remington/repos/geodarn/20230110.1800.00.inv.gridded.hdf5')
     print('Done')

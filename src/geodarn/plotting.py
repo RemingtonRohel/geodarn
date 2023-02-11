@@ -9,7 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 
-from src.geodarn import parse_hdw
+import parse_hdw
 from utils.constants import sites
 import geolocation as gl
 

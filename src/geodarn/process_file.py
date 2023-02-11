@@ -3,8 +3,8 @@ import argparse
 # Imports from local files
 import pydarnio
 
-from . import geolocation as gl
-from .utils import formats, extract_records as extraction
+import geolocation as gl
+from geodarn import formats, extract_records as extraction
 
 
 def process_fitacf_file(infile, outfile, tx_site, rx_site):
@@ -35,7 +35,7 @@ def process_fitacf_file(infile, outfile, tx_site, rx_site):
         if result is not None:
             geo_records.append(result)
 
-    container = formats.Located.create_from_records(geo_records, tx_site, rx_site)
+    container = formats.Container.create_located_from_records(geo_records, tx_site, rx_site)
 
     print(f'Writing results to file {outfile}')
     container.dataclass_to_hdf5(outfile)
