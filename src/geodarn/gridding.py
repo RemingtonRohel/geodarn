@@ -41,7 +41,7 @@ def create_grid(lat_min=50, lat_width=1., hemisphere='north'):
 
     lon_divs = []
     for i in range(num_lons.shape[0]):
-        lon_divs.append(np.linspace(0, 360, num_lons[i] + 1))
+        lon_divs.append(np.linspace(-180, 180, num_lons[i] + 1))
         grid_mask[i, num_lons[i]+1:, :] = True     # Mask out all entries past the maximum
 
         lon_centers = lon_divs[i][:-1] + (lon_divs[i][1] - lon_divs[i][0])/2        # Center of each cell in longitude
@@ -53,43 +53,83 @@ def create_grid(lat_min=50, lat_width=1., hemisphere='north'):
     return lat_divs_bottom, lon_divs, grid
 
 
-def create_grid_records(geo_records, lat_min=50, lat_width=1.0, hemisphere='north'):
+def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
+    """
+    Grids all points in located and creates a Gridded dataclass output.
+
+    Parameters
+    ----------
+    located: Located
+        Dataclass storing the geolocated points
+    lat_min: int
+        Lower latitude boundary for the grid.
+    lat_width: float
+        Latitudinal width of bins for the grid.
+    hemisphere: str
+        Either 'north' or 'south'.
+
+    Returns
+    -------
+
+    """
     lat_divs_bottom, lon_divs, grid = create_grid(lat_min, lat_width, hemisphere)
+    idx_in_grid = np.zeros(located.location.shape, dtype=np.int32)
+    min_lat = np.min(located.location[:, 1])
+    max_lat = np.max(located.location[:, 1])
+    min_lon = np.min(located.location[:, 0])
+    max_lon = np.max(located.location[:, 0])
 
-    grid_dict = {}
-    grid_dict['min_lat'] = lat_divs_bottom[0]
-    grid_dict['lat_width'] = lat_width
-    grid_dict['bins'] = []
+    lat_indices = np.argwhere(np.logical_and(lat_divs_bottom > min_lat - lat_width, lat_divs_bottom < max_lat))
 
+    # Loop through the latitude bins with data
+    for lat_idx in lat_indices:
+        lat = lat_divs_bottom[lat_idx]
+        matching_points_lat = np.logical_and(lat < located.location[:, 1], located.location[:, 1] < lat + lat_width)
+        matching_indices_lat = np.argwhere(matching_points_lat)
+        lon_divs_for_lat = lon_divs[lat_idx[0]]
+        lon_indices = np.argwhere(np.logical_and(min_lon < lon_divs_for_lat, lon_divs_for_lat < max_lon))
 
+        # Loop through the longitude bins with data
+        for lon_idx in lon_indices:
+            matching_points_lon = np.logical_and(
+                lon_divs_for_lat[lon_idx] < located.location[matching_points_lat, 0],
+                located.location[matching_points_lat, 0] < lon_divs_for_lat[lon_idx + 1])
+            # Record the indices into grid for each point
+            idx_in_grid[matching_indices_lat[np.argwhere(matching_points_lon)]] = (lat_idx[0], lon_idx[0])
 
+    return idx_in_grid, grid
 
 
 if __name__ == '__main__':
-    import os
-    lat_divs_bottom, lon_divs, grid = create_grid(lat_min=55, lat_width=1.0)
+    from utils.formats import Located, Gridded
     fig = plt.figure(figsize=[5, 5])
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.NorthPolarStereo(central_longitude=-100))
     ax.set_extent([-180, 180, 40, 90], ccrs.PlateCarree())
     ax.coastlines(zorder=5, alpha=0.4)
     ax.gridlines()
 
-    for lat_idx in range(grid.shape[0]):
-        ax.scatter(x=grid[lat_idx, :, 1], y=grid[lat_idx, :, 0], transform=ccrs.PlateCarree(),
-                   color='k', alpha=0.2, s=2)
+    container = Located.hdf5_to_dataclass('/data/special_experiments/202301/bistatic/cly/fitacf/20230110.0000.37.cly.located.hdf5')
+    tx_site = container.tx_site_name
+    rx_site = container.rx_site_name
+    site_ids = [tx_site, rx_site]
 
-    geo_records = file_ops.read_geodarn_file(f'{os.path.dirname(__file__)}/geodarn_test.hdf5')
-
-    timestamps = sorted(list(geo_records['records'].keys()))
-    rx_site = geo_records['records'][timestamps[0]]['rx_site']
-    tx_site = geo_records['records'][timestamps[0]]['tx_site']
-    site_ids = [rx_site]
-    if rx_site != tx_site:
-        site_ids.append(tx_site)
-
+    indices = container.time_slices[10]
+    slice_obj = slice(indices[0], indices[1])
+    
     # Plot the data on a map
-    record = geo_records['records'][timestamps[0]]
-    plotting.plot_single_param_from_scan(fig, ax, record, 'velocity', label='Velocity [m/s]', site_ids=site_ids, stem=True)
+    # plotting.plot_single_param_from_scan(fig, ax, container, slice_obj, 'velocity', label='Velocity [m/s]',
+    #                                      site_ids=site_ids, stem=True)
+
+    indices_in_grid, grid = create_grid_records(container)
+
+    single_scan_indices = indices_in_grid[slice_obj]
+
+    for (lat, lon) in single_scan_indices:
+        ax.scatter(x=grid[lat, lon, 1], y=grid[lat, lon, 0], transform=ccrs.PlateCarree(),
+                   color='k', alpha=0.2, s=2)
 
     plt.show()
     plt.close()
+
+    gridded = Gridded.create_from_located(container)
+    print('Done')

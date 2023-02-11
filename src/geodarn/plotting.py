@@ -191,17 +191,18 @@ def add_fov_boundaries(axis, site):
     return axis
 
 
-def plot_single_param_from_scan(fig, ax, record, param, label=None, site_ids=(), stem=True, colorbar=True):
+def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, site_ids=(), stem=True, colorbar=True):
 
-    plot_values = record[param]
+    plot_values = getattr(record, param)[idx_slice]
+    locations = getattr(record, 'location')[idx_slice]
 
     if param == 'velocity' and stem:
         scale_value = 250  # Ratio of geographic distance in meters of plotted vector to LOS velocity value in m/s
-        end_points = cartopy.geodesic.Geodesic().direct(record['locations'], record['velocity_dirs'],
+        end_points = cartopy.geodesic.Geodesic().direct(locations, getattr(record, 'velocity_dir')[idx_slice],
                                                         scale_value * plot_values)
-        plot_geolocated_lines(ax, param, record['locations'], end_points[:, :2], plot_values)
+        plot_geolocated_lines(ax, param, locations, end_points[:, :2], plot_values)
 
-    plot_geolocated_scatter(ax, param, record['locations'], plot_values)
+    plot_geolocated_scatter(ax, param, locations, plot_values)
 
     if colorbar:
         add_colorbar(fig, ax, param, shrink=0.5)

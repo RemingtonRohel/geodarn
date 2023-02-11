@@ -35,7 +35,7 @@ def process_fitacf_file(infile, outfile, tx_site, rx_site):
         if result is not None:
             geo_records.append(result)
 
-    container = formats.Container.create_from_records(geo_records, tx_site, rx_site)
+    container = formats.Located.create_from_records(geo_records, tx_site, rx_site)
 
     print(f'Writing results to file {outfile}')
     container.dataclass_to_hdf5(outfile)
