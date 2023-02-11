@@ -231,7 +231,10 @@ class Container:
             for x in fields(self):
                 key = x.name
                 path = f'{x.metadata.get("group")}/{key}'
-                value = getattr(self, key)
+                try:
+                    value = getattr(self, key)
+                except AttributeError:
+                    continue
                 if type(value) is str:
                     value = np.asarray(value, dtype='S')
                 else:
