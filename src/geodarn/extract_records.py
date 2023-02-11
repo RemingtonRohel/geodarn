@@ -3,7 +3,7 @@ import collections
 
 import numpy as np
 
-import utils.fitacf_format as fitacf
+import geodarn.utils.fitacf_format as fitacf
 
 
 def extract_single_scan(fitacf_data, nearest_time):

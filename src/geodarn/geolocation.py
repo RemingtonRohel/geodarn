@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 import cartopy.geodesic
 
-from parse_hdw import Hdw
+from geodarn.parse_hdw import Hdw
 
 
 def find_elevation(site_id, beam_dirs, freq_hz, phi0):

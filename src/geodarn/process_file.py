@@ -3,7 +3,7 @@ import argparse
 # Imports from local files
 import pydarnio
 
-import geolocation as gl
+from geodarn import geolocation as gl
 from geodarn import formats, extract_records as extraction
 
 

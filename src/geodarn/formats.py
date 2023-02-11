@@ -9,8 +9,7 @@ import h5py
 import datetime
 import collections
 
-import parse_hdw
-import gridding
+from geodarn import parse_hdw, gridding
 
 
 def version():
