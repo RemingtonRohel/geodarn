@@ -71,6 +71,8 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
 
     """
     lat_divs_bottom, lon_divs, grid = create_grid(lat_min, lat_width, hemisphere)
+    num_lons = grid.shape[1]
+    grid = grid.reshape(-1, 2)   # flatten so that lats iterate more slowly than lons
     idx_in_grid = np.zeros(located.location.shape, dtype=np.int32)
     min_lat = np.min(located.location[:, 1])
     max_lat = np.max(located.location[:, 1])
@@ -93,7 +95,7 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
                 lon_divs_for_lat[lon_idx] < located.location[matching_points_lat, 0],
                 located.location[matching_points_lat, 0] < lon_divs_for_lat[lon_idx + 1])
             # Record the indices into grid for each point
-            idx_in_grid[matching_indices_lat[np.argwhere(matching_points_lon)]] = (lat_idx[0], lon_idx[0])
+            idx_in_grid[matching_indices_lat[np.argwhere(matching_points_lon)]] = lat_idx[0] * num_lons + lon_idx[0]
 
     return idx_in_grid, grid
 
@@ -106,7 +108,8 @@ if __name__ == '__main__':
     ax.coastlines(zorder=5, alpha=0.4)
     ax.gridlines()
 
-    gridded = Container.hdf5_to_dataclass('/home/remington/repos/geodarn/20230110.1800.00.inv.gridded.hdf5')
+    located = Container.hdf5_to_dataclass('/home/remington/repos/geodarn/20230110.1800.00.inv.located.hdf5')
+    gridded = Container.create_gridded_from_located(located)
     tx_site = gridded.tx_site_name
     rx_site = gridded.rx_site_name
     site_ids = [tx_site, rx_site]
@@ -122,8 +125,8 @@ if __name__ == '__main__':
 
     single_scan_indices = gridded.location_idx[slice_obj]
 
-    for (lat, lon) in single_scan_indices:
-        ax.scatter(x=gridded.location[lat, lon, 1], y=gridded.location[lat, lon, 0], transform=ccrs.PlateCarree(),
+    for idx in single_scan_indices:
+        ax.scatter(x=gridded.location[idx, 1], y=gridded.location[idx, 0], transform=ccrs.PlateCarree(),
                    color='k', alpha=0.2, s=2)
 
     plt.show()
