@@ -9,9 +9,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 
-import parse_hdw
-from utils.constants import sites
-import geolocation as gl
+from . import parse_hdw
+from .utils.constants import sites
+from . import geolocation as gl
 
 
 def azimuthal_lines(site, min_range, max_range, beam_width=3.24, elevation=0.0):
@@ -121,21 +121,21 @@ def get_cmap_and_norm(param):
 
     :param param: Parameter in question. One of 'v', 'p_l', 'w_l', 'elv', or 'h_v'
     """
-    params = ['power', 'velocity', 'spectral_width', 'lobe']#, 'groundscatter']
+    params = ['power_db', 'velocity', 'spectral_width', 'lobe']#, 'groundscatter']
     if param not in params:
         raise ValueError(f'Unknown parameter {param}:\n'
                          f'Supported parameters are {params}')
 
-    value_ranges = {'power': [0, 40],
+    value_ranges = {'power_db': [0, 40],
                     'velocity': [-400, 400],
                     'spectral_width': [0, 1000],
                     'lobe': [0, 7]
                     }
     colors = {
-        'power': 'plasma',
+        'power_db': 'jet',
         'velocity': matplotlib.colors.LinearSegmentedColormap.from_list('pydarn_velocity',
                                                                  ['darkred', 'r', 'pink', 'b', 'darkblue']),
-        'spectral_width': 'viridis',
+        'spectral_width': 'jet',
         'lobe': matplotlib.colors.ListedColormap(['grey', 'red', 'blue', 'green', 'yellow', 'orange', 'purple'])
     }
 
@@ -163,7 +163,7 @@ def add_colorbar(fig, axis, param, **kwargs):
         ticks = None
     cmap, norm = get_cmap_and_norm(param)
 
-    extend = {'power': 'max',
+    extend = {'power_db': 'max',
               'velocity': 'both',
               'spectral_width': 'max',
               'lobe': 'neither',
