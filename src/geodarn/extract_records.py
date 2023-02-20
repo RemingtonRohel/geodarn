@@ -145,9 +145,9 @@ def merge_simultaneous_records(records):
             if len(merged_record[k]) != 0:
                 merged_record[k] = np.concatenate(merged_record[k])
             else:
-                if isinstance(t, float):
+                if issubclass(t, float):
                     merged_record[k] = np.array([np.nan])
-                elif isinstance(t, int):
+                elif issubclass(t, int):
                     merged_record[k] = np.array([-1])
                 else:
                     raise ValueError(f'Unexpected type {t} for key {k}')
@@ -159,19 +159,21 @@ def merge_simultaneous_records(records):
             if len(merged_record[k]) != 0:
                 merged_record[k] = np.concatenate(merged_record[k])
             else:
-                if isinstance(t, float):
+                if issubclass(t, float):
                     merged_record[k] = np.array([np.nan])
-                elif isinstance(t, int):
+                elif issubclass(t, int):
                     merged_record[k] = np.array([-1])
                 else:
                     raise ValueError(f'Unexpected type {t} for key {k}')
 
         # Add all fields common across the simultaneous records
         for k in fitacf.scan_specific_scalars.keys():
-            merged_record[k] = group[0][k]
+            if k in group[0].keys():
+                merged_record[k] = group[0][k]
             
         for k in fitacf.scan_specific_vectors.keys():
-            merged_record[k] = group[0][k]
+            if k in group[0].keys():
+                merged_record[k] = group[0][k]
 
         merged_records.append(merged_record)
 

@@ -106,5 +106,3 @@ record_specific_vectors = {
     'x_sd_phi': float
 }
 
-keys = scan_specific_scalars + scan_specific_vectors + record_specific_scalars + record_specific_vectors
-
