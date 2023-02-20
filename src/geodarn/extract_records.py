@@ -137,39 +137,36 @@ def merge_simultaneous_records(records):
     for group in grouped_records:
         merged_record = collections.defaultdict(list)
 
-        for k in group[0].keys():
-            # Add all fields unique to each record in the scan
-            if k in fitacf.record_specific_vectors:
-                for rec in group:
-                    try:
-                        merged_record[k].append(rec[k])
-                    except KeyError:    # There was no data for the record
-                        pass
-                if len(merged_record[k]) != 0:
-                    merged_record[k] = np.concatenate(merged_record[k])
+        # Add all fields unique to each record in the scan
+        for k in fitacf.record_specific_vectors:
+            for rec in group:
+                if k in rec.keys():
+                    merged_record[k].append(rec[k])
                 else:
-                    merged_record[k] = np.array([])
-            elif k in fitacf.record_specific_scalars:
-                for rec in group:
-                    try:
-                        merged_record[k].append(np.ones(rec['slist'].shape) * rec[k])
-                    except KeyError:
-                        # There was no data for the record. Continue
-                        pass
-                if len(merged_record[k]) != 0:
-                    merged_record[k] = np.concatenate(merged_record[k])
-                else:
-                    merged_record[k] = []
-
-            # Add all fields common across the simultaneous records
-            elif k in fitacf.scan_specific_scalars:
-                merged_record[k] = group[0][k]
-            elif k in fitacf.scan_specific_vectors:
-                merged_record[k] = group[0][k]
-
-            # Unknown quantity
+                    merged_record[k].append(np.array([np.nan]))
+            if len(merged_record[k]) != 0:
+                merged_record[k] = np.concatenate(merged_record[k])
             else:
-                raise KeyError(f'Unknown record key {k}')
+                merged_record[k] = np.array([])
+            
+        for k in fitacf.record_specific_scalars:
+            for rec in group:
+                if 'slist' in rec.keys():
+                    merged_record[k].append(np.ones(rec['slist'].shape) * rec[k])
+                else:
+                    # There was no data for the record, so just save a single value
+                    merged_record[k].append(np.array([rec[k]]))
+            if len(merged_record[k]) != 0:
+                merged_record[k] = np.concatenate(merged_record[k])
+            else:
+                merged_record[k] = []
+
+        # Add all fields common across the simultaneous records
+        for k in fitacf.scan_specific_scalars:
+            merged_record[k] = group[0][k]
+            
+        for k in fitacf.scan_specific_vectors:
+            merged_record[k] = group[0][k]
 
         merged_records.append(merged_record)
 
