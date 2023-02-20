@@ -138,34 +138,39 @@ def merge_simultaneous_records(records):
         merged_record = collections.defaultdict(list)
 
         # Add all fields unique to each record in the scan
-        for k in fitacf.record_specific_vectors:
+        for k, t in fitacf.record_specific_vectors.items():
             for rec in group:
                 if k in rec.keys():
                     merged_record[k].append(rec[k])
-                else:
-                    merged_record[k].append(np.array([np.nan]))
             if len(merged_record[k]) != 0:
                 merged_record[k] = np.concatenate(merged_record[k])
             else:
-                merged_record[k] = np.array([])
+                if isinstance(t, float):
+                    merged_record[k] = np.array([np.nan])
+                elif isinstance(t, int):
+                    merged_record[k] = np.array([-1])
+                else:
+                    raise ValueError(f'Unexpected type {t} for key {k}')
             
-        for k in fitacf.record_specific_scalars:
+        for k, t in fitacf.record_specific_scalars.items():
             for rec in group:
                 if 'slist' in rec.keys():
                     merged_record[k].append(np.ones(rec['slist'].shape) * rec[k])
-                else:
-                    # There was no data for the record, so just save a single value
-                    merged_record[k].append(np.array([rec[k]]))
             if len(merged_record[k]) != 0:
                 merged_record[k] = np.concatenate(merged_record[k])
             else:
-                merged_record[k] = []
+                if isinstance(t, float):
+                    merged_record[k] = np.array([np.nan])
+                elif isinstance(t, int):
+                    merged_record[k] = np.array([-1])
+                else:
+                    raise ValueError(f'Unexpected type {t} for key {k}')
 
         # Add all fields common across the simultaneous records
-        for k in fitacf.scan_specific_scalars:
+        for k in fitacf.scan_specific_scalars.keys():
             merged_record[k] = group[0][k]
             
-        for k in fitacf.scan_specific_vectors:
+        for k in fitacf.scan_specific_vectors.keys():
             merged_record[k] = group[0][k]
 
         merged_records.append(merged_record)
