@@ -2,6 +2,7 @@ import argparse
 
 # Imports from local files
 import pydarnio
+import numpy as np
 
 from geodarn import geolocation as gl
 from geodarn import formats, extract_records as extraction
@@ -22,24 +23,17 @@ def process_fitacf_file(infile, outfile, tx_site, rx_site):
     rx_site: str
         Three-letter radar code for the receiver site. Lowercase letters.
     """
-    print(f'Reading file {infile}')
     sdarn_read = pydarnio.SDarnRead(infile)
     records = sdarn_read.read_fitacf()
-    print(f'Grouping {len(records)} records by timestamp')
     merged_records = extraction.merge_simultaneous_records(records)
-    print(f'Geolocating scatter in all {len(merged_records)} merged records')
+    
     geo_records = []
-
     for rec in merged_records:
         result = gl.geolocate_record(rec, rx_site, tx_site)
-        if result is not None:
-            geo_records.append(result)
+        geo_records.append(result)
 
     container = formats.Container.create_located_from_records(geo_records, tx_site, rx_site)
-
-    print(f'Writing results to file {outfile}')
     container.dataclass_to_hdf5(outfile)
-
 
 
 if __name__ == '__main__':

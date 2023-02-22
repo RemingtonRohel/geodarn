@@ -267,15 +267,10 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
         *'elv':                  Elevation values for each point.
         *'slist':                Range gate values for each point.
     """
-    if len(record['elv']) == 0:
-        return None
     results = geolocate_scatter(tx_site, rx_site, record['elv'], record['bmazm'], record['slist'])
 
     groundscatter = record['gflg']
     slist = record['slist']
-
-    if len(slist) == 0:     # No valid points found
-        return
 
     geodesic = cartopy.geodesic.Geodesic()
     rx = Hdw.read_hdw_file(rx_site)
@@ -326,18 +321,42 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
     misplaced_points |= results.pop('h_tx') < min_hv                    # unphysically low
     misplaced_points |= np.isnan(results['scatter_location'][:, 0])     # had a calculation error somewhere
     valid_points = np.logical_and(valid_points, ~misplaced_points)  # Keep track of "good" located points
-    for k, v in results.items():
-        results[k] = v[valid_points]
 
-    results['lobe'] = lobe_num[valid_points]
+    for k, v in results.items():
+        if np.count_nonzero(valid_points) != 0:
+            results[k] = v[valid_points]
+        else:
+            #print(f'no valid points\t{k}: {type(v)}')
+            shape = v.shape
+            if len(shape) > 1:
+                shape = shape[1:]
+            else:
+                shape = ()
+            if issubclass(v.dtype.type, np.float_):
+                results[k] = np.ones((1,) + shape, v.dtype) * np.nan
+            elif issubclass(v.dtype.type, np.int_):
+                results[k] = np.ones((1,) + shape, v.dtype) * -1
+            else:
+                raise ValueError('I do not understand: {k}: {v}')
+
+    if np.count_nonzero(valid_points) != 0:
+        results['lobe'] = lobe_num[valid_points]
+    else:
+        results['lobe'] = np.zeros((1,), lobe_num.dtype)
 
     # Combine the fitacf record with the results record
 
     # Vector fields
-    results['v'] = record['v'][valid_points] * results.pop('velocity_correction')
-    results['w_l'] = record['w_l'][valid_points]
-    results['p_l'] = record['p_l'][valid_points]
-    results['gsct'] = record['gflg'][valid_points]
+    if np.count_nonzero(valid_points) != 0:
+        results['v'] = record['v'][valid_points] * results.pop('velocity_correction')
+        results['w_l'] = record['w_l'][valid_points]
+        results['p_l'] = record['p_l'][valid_points]
+        results['gsct'] = record['gflg'][valid_points]
+    else:
+        results['v'] = np.ones((1,), record['v'].dtype) * np.nan
+        results['w_l'] = np.ones((1,), record['w_l'].dtype) * np.nan
+        results['p_l'] = np.ones((1,), record['p_l'].dtype) * np.nan
+        results['gsct'] = np.ones((1,), record['gflg'].dtype) * -1
 
     # Scalar fields
     results['cp'] = record['cp']

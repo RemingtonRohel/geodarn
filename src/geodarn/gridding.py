@@ -73,11 +73,12 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
     lat_divs_bottom, lon_divs, grid = create_grid(lat_min, lat_width, hemisphere)
     num_lons = grid.shape[1]
     grid = grid.reshape(-1, 2)   # flatten so that lats iterate more slowly than lons
-    idx_in_grid = np.zeros(located.location.shape, dtype=np.int32)
-    min_lat = np.min(located.location[:, 1])
-    max_lat = np.max(located.location[:, 1])
-    min_lon = np.min(located.location[:, 0])
-    max_lon = np.max(located.location[:, 0])
+    idx_in_grid = np.ones(located.location.shape[0], dtype=np.int32) * -1
+    non_nan_locations = np.argwhere(~np.isnan(located.location[:, 0]))
+    min_lat = np.min(located.location[non_nan_locations, 1])
+    max_lat = np.max(located.location[non_nan_locations, 1])
+    min_lon = np.min(located.location[non_nan_locations, 0])
+    max_lon = np.max(located.location[non_nan_locations, 0])
 
     lat_indices = np.argwhere(np.logical_and(lat_divs_bottom > min_lat - lat_width, lat_divs_bottom < max_lat))
 
