@@ -4,12 +4,14 @@ Dataclass containers for ICEBEAR-3D data processing and HDF5 data packing.
 import os
 import re
 from dataclasses import dataclass, field, fields
-import numpy as np
-import h5py
 import datetime
 import collections
 
-from geodarn import parse_hdw, gridding
+import numpy as np
+import h5py
+import pydarnio
+
+from geodarn import parse_hdw, gridding, geolocation, extract_records
 
 
 def version():
@@ -66,7 +68,7 @@ class Container:
     location: np.ndarray = field(
         metadata={'group': 'data',
                   'units': 'degrees',
-                  'description': 'Array of [lat, lon] locations'})
+                  'description': 'Array of [lon, lat] locations'})
     power_db: np.ndarray = field(
         metadata={'group': 'data',
                   'units': 'dB',
@@ -142,91 +144,7 @@ class Container:
 
         self.date_created = __version__
 
-    @staticmethod
-    def create_located_from_records(records, tx_site, rx_site):
-        """
-        Instantiates the Data class with the contents of records.
-
-        Parameters
-        ----------
-        records: list
-            List of geolocated record dictionaries.
-        tx_site: str
-            Three-letter code of transmitting radar site.
-        rx_site: str
-            Three-letter code of receiving radar site.
-
-        Returns
-        -------
-        Container
-            Container object with the relevant parameters from records
-        """
-        lists = collections.defaultdict(list)
-        for rec in records:
-            lists['time'].append(np.repeat(np.float64(rec['timestamp'].timestamp()), len(rec['v'])))
-            lists['location'].append(rec['scatter_location'])
-            lists['power_db'].append(rec['p_l'])
-            lists['velocity'].append(rec['v'])
-            lists['velocity_dir'].append(rec['look_dir'])
-            lists['spectral_width'].append(rec['w_l'])
-            lists['groundscatter'].append(rec['gsct'])
-
-        return Container(time=np.concatenate(lists['time']),
-                         location=np.concatenate(lists['location']),
-                         power_db=np.concatenate(lists['power_db']),
-                         velocity=np.concatenate(lists['velocity']),
-                         velocity_dir=np.concatenate(lists['velocity_dir']),
-                         spectral_width=np.concatenate(lists['spectral_width']),
-                         groundscatter=np.concatenate(lists['groundscatter']),
-                         date=np.array([records[0]['timestamp'].year,
-                                        records[0]['timestamp'].month,
-                                        records[0]['timestamp'].day], dtype=int),
-                         experiment_cpid=records[0]['cp'],
-                         comment=records[0]['combf'],
-                         tx_site_name=tx_site,
-                         rx_site_name=rx_site,
-                         rx_freq=records[0]['tfreq'])
-
-    @staticmethod
-    def create_gridded_from_located(located, **kwargs):
-        """
-        Instantiates the Data class with the contents of records.
-
-        Parameters
-        ----------
-        located: Container
-            Located dataclass
-        **kwargs: dict
-            supported values are 'lat_min', 'lat_width', 'hemisphere' for determining the grid.
-
-        Returns
-        -------
-        Container
-            Container object with the relevant parameters from records
-        """
-
-        idx_in_grid, grid = gridding.create_grid_records(located, lat_min=kwargs.get('lat_min', 50.0),
-                                                         lat_width=kwargs.get('lat_width', 1.0),
-                                                         hemisphere=kwargs.get('hemisphere', 'north'))
-
-        gridded = Container(time=located.time,
-                            location=grid,
-                            power_db=located.power_db,
-                            velocity=located.velocity,
-                            velocity_dir=located.velocity_dir,
-                            spectral_width=located.spectral_width,
-                            groundscatter=located.groundscatter,
-                            date=located.date,
-                            experiment_cpid=located.experiment_cpid,
-                            comment=located.comment,
-                            tx_site_name=located.tx_site_name,
-                            rx_site_name=located.rx_site_name,
-                            rx_freq=located.rx_freq)
-        gridded.location_idx = idx_in_grid
-
-        return gridded
-
-    def dataclass_to_hdf5(self, outfile):
+    def to_hdf5(self, outfile):
         with h5py.File(outfile, 'w') as f:
             for x in fields(self):
                 key = x.name
@@ -249,7 +167,7 @@ class Container:
                         f[path].attrs[k] = v
 
     @classmethod
-    def hdf5_to_dataclass(cls, infile: str):
+    def from_hdf5(cls, infile: str):
         init_fields = {}
         after_init_fields = {}
 
@@ -271,3 +189,115 @@ class Container:
             setattr(container, k, v)
 
         return container
+
+
+def create_located_from_fitacf(infile, outfile, tx_site, rx_site):
+    """
+    Reads in a fitacf file and processes it into a geolocated outfile.
+
+    Parameters
+    ----------
+    infile: str
+        Path to fitacf file.
+    outfile: str
+        Path to output geolocated file.
+    tx_site: str
+        Three-letter radar code for the transmitter site. Lowercase letters.
+    rx_site: str
+        Three-letter radar code for the receiver site. Lowercase letters.
+    """
+    sdarn_read = pydarnio.SDarnRead(infile)
+    records = sdarn_read.read_fitacf()
+    merged_records = extract_records.merge_simultaneous_records(records)
+
+    geo_records = []
+    for rec in merged_records:
+        result = geolocation.geolocate_record(rec, rx_site, tx_site)
+        geo_records.append(result)
+
+    container = create_located_from_records(geo_records, tx_site, rx_site)
+    container.to_hdf5(outfile)
+
+
+def create_located_from_records(records, tx_site, rx_site):
+    """
+    Instantiates the Data class with the contents of records.
+
+    Parameters
+    ----------
+    records: list
+        List of geolocated record dictionaries.
+    tx_site: str
+        Three-letter code of transmitting radar site.
+    rx_site: str
+        Three-letter code of receiving radar site.
+
+    Returns
+    -------
+    Container
+        Container object with the relevant parameters from records
+    """
+    lists = collections.defaultdict(list)
+    for rec in records:
+        lists['time'].append(np.repeat(np.float64(rec['timestamp'].timestamp()), len(rec['v'])))
+        lists['location'].append(rec['scatter_location'])
+        lists['power_db'].append(rec['p_l'])
+        lists['velocity'].append(rec['v'])
+        lists['velocity_dir'].append(rec['look_dir'])
+        lists['spectral_width'].append(rec['w_l'])
+        lists['groundscatter'].append(rec['gsct'])
+
+    return Container(time=np.concatenate(lists['time']),
+                     location=np.concatenate(lists['location']),
+                     power_db=np.concatenate(lists['power_db']),
+                     velocity=np.concatenate(lists['velocity']),
+                     velocity_dir=np.concatenate(lists['velocity_dir']),
+                     spectral_width=np.concatenate(lists['spectral_width']),
+                     groundscatter=np.concatenate(lists['groundscatter']),
+                     date=np.array([records[0]['timestamp'].year,
+                                    records[0]['timestamp'].month,
+                                    records[0]['timestamp'].day], dtype=int),
+                     experiment_cpid=records[0]['cp'],
+                     comment=records[0]['combf'],
+                     tx_site_name=tx_site,
+                     rx_site_name=rx_site,
+                     rx_freq=records[0]['tfreq'])
+
+
+def create_gridded_from_located(located, **kwargs):
+    """
+    Instantiates the Data class with the contents of records.
+
+    Parameters
+    ----------
+    located: Container
+        Located dataclass
+    **kwargs: dict
+        supported values are 'lat_min', 'lat_width', 'hemisphere' for determining the grid.
+
+    Returns
+    -------
+    Container
+        Container object with the relevant parameters from records
+    """
+
+    idx_in_grid, grid = gridding.create_grid_records(located, lat_min=kwargs.get('lat_min', 50.0),
+                                                     lat_width=kwargs.get('lat_width', 1.0),
+                                                     hemisphere=kwargs.get('hemisphere', 'north'))
+
+    gridded = Container(time=located.time,
+                        location=grid,
+                        power_db=located.power_db,
+                        velocity=located.velocity,
+                        velocity_dir=located.velocity_dir,
+                        spectral_width=located.spectral_width,
+                        groundscatter=located.groundscatter,
+                        date=located.date,
+                        experiment_cpid=located.experiment_cpid,
+                        comment=located.comment,
+                        tx_site_name=located.tx_site_name,
+                        rx_site_name=located.rx_site_name,
+                        rx_freq=located.rx_freq)
+    gridded.location_idx = idx_in_grid
+
+    return gridded

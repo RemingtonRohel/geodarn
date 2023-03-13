@@ -1,5 +1,5 @@
-import os
 import copy
+from datetime import datetime
 
 import shapely.geometry
 import numpy as np
@@ -9,9 +9,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import offset_copy
 
-from . import parse_hdw
-from .utils.constants import sites
-from . import geolocation as gl
+from geodarn import parse_hdw, formats
+from geodarn.utils.constants import sites
+from geodarn import geolocation as gl
 
 
 def azimuthal_lines(site, min_range, max_range, beam_width=3.24, elevation=0.0):
@@ -102,8 +102,9 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
             ax.plot(site.location[1], site.location[0], markersize=5, color='blue', marker='o',
                     transform=ccrs.PlateCarree())
             platecarree_transform = ccrs.PlateCarree()._as_mpl_transform(ax)
-            tx_transform = offset_copy(platecarree_transform, units='dots', x=site['hshift'], y=site['vshift'])
-            ax.text(site.location[1], site.location[0], f'\\textbf{{{site_id.upper()}}}', verticalalignment='bottom',
+            tx_transform = offset_copy(platecarree_transform, units='dots', x=sites[site_id]['hshift'],
+                                       y=sites[site_id]['vshift'])
+            ax.text(site.location[1], site.location[0], f'{site_id.upper()}', verticalalignment='bottom',
                     horizontalalignment='left', transform=tx_transform)
 
     if isinstance(axes, np.ndarray):
@@ -127,7 +128,7 @@ def get_cmap_and_norm(param):
                          f'Supported parameters are {params}')
 
     value_ranges = {'power_db': [0, 40],
-                    'velocity': [-400, 400],
+                    'velocity': [-1000, 1000],
                     'spectral_width': [0, 1000],
                     'lobe': [0, 7]
                     }
@@ -197,7 +198,7 @@ def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, s
     locations = getattr(record, 'location')[idx_slice]
 
     if param == 'velocity' and stem:
-        scale_value = 250  # Ratio of geographic distance in meters of plotted vector to LOS velocity value in m/s
+        scale_value = 100  # Ratio of geographic distance in meters of plotted vector to LOS velocity value in m/s
         end_points = cartopy.geodesic.Geodesic().direct(locations, getattr(record, 'velocity_dir')[idx_slice],
                                                         scale_value * plot_values)
         plot_geolocated_lines(ax, param, locations, end_points[:, :2], plot_values)
@@ -205,7 +206,7 @@ def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, s
     plot_geolocated_scatter(ax, param, locations, plot_values)
 
     if colorbar:
-        add_colorbar(fig, ax, param, shrink=0.5)
+        add_colorbar(fig, ax, param, shrink=0.7)
     if label is not None:
         ax.set_title(label)
 
@@ -216,14 +217,13 @@ def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, s
 
 def plot_scans_on_map(infile, plot_dir, prefix=''):
     """
-    Takes a fitacf file and plots the power, velocity, spectral width, and elevation
-    for all times. Each plot is saved separately in plot_dir with the format {prefix}YYYYMMDD-HH:MM:SS.ffffff.png
+    Takes a located file and plots the power, velocity, spectral width, and elevation
+    for all times. Each plot is saved separately in plot_dir with the format {prefix}YYYY-MM-DD_HH-MM-SS.ffffff.png
     """
-    geo_records = file_ops.read_geodarn_file(infile)
+    data = formats.Container.from_hdf5(infile)
+    rx_site = data.rx_site_name
+    tx_site = data.tx_site_name
 
-    timestamps = sorted(list(geo_records['records'].keys()))
-    rx_site = geo_records['records'][timestamps[0]]['rx_site']
-    tx_site = geo_records['records'][timestamps[0]]['tx_site']
     site_ids = [rx_site]
     if rx_site == tx_site:
         lon_extent = sites[rx_site]['lon_extent']
@@ -233,25 +233,30 @@ def plot_scans_on_map(infile, plot_dir, prefix=''):
         lon_extent = (-131, -30)
         lat_extent = (60, 75)
 
-    for tstamp in timestamps:
+    time_slices = data.time_slices
+
+    for i in range(len(time_slices)):
+        tstamp = datetime.fromtimestamp(data.time[time_slices[i, 0]]).strftime('%Y-%m-%d_%H-%M-%S.%f')
+        slice_obj = slice(time_slices[i, 0], time_slices[i, 1])
+
         print(tstamp)
 
-        if os.path.isfile(f'{plot_dir}/{prefix}{tstamp}.png'):
-            continue
-
         # Plot the data on a map
-        fig, axes = generate_bistatic_axes(site_ids, (2, 2), lon_extent=lon_extent, lat_extent=lat_extent,
-                                           size=(8, 8))
+        fig, axes = generate_bistatic_axes(site_ids, (1, 3), lon_extent=lon_extent, lat_extent=lat_extent,
+                                           size=(15, 5))
 
-        record = geo_records['records'][tstamp]
-        plot_single_param_from_scan(fig, axes[0, 0], record, 'power', label='Power [dB]', site_ids=site_ids)
-        plot_single_param_from_scan(fig, axes[0, 1], record, 'velocity', label='Velocity [m/s]', site_ids=site_ids,
-                                    stem=False)
-        plot_single_param_from_scan(fig, axes[1, 0], record, 'spectral_width', label='Spectral Width [m/s]',
+        plot_single_param_from_scan(fig, axes[0], data, slice_obj, 'power_db', label='Power [dB]',
                                     site_ids=site_ids)
-        # plot_single_param_from_scan(fig, axes[1, 1], record, 'elv', label='Elevation [deg]', site_ids=site_ids)
-        fig.tight_layout()
+        plot_single_param_from_scan(fig, axes[1], data, slice_obj, 'velocity', label=f'{tstamp}\n\nVelocity [m/s]',
+                                    site_ids=site_ids, stem=False)
+        plot_single_param_from_scan(fig, axes[2], data, slice_obj, 'spectral_width', label='Spectral Width [m/s]',
+                                    site_ids=site_ids)
 
-        fig.suptitle(tstamp)
         plt.savefig(f'{plot_dir}/{prefix}{tstamp}.png')
         plt.close()
+
+
+if __name__ == '__main__':
+    infile = '/data/special_experiments/202301/full_fov/rkn/corrected_tdiff/20230111.15-21.rkn.a.despeck.located.hdf5'
+    plot_dir = '/data/special_experiments/202301/full_fov/rkn/corrected_tdiff/despeck_scans'
+    plot_scans_on_map(infile, plot_dir)

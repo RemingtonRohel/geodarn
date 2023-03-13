@@ -43,8 +43,8 @@ def create_grid(lat_min=50, lat_width=1., hemisphere='north'):
         grid_mask[i, num_lons[i]+1:, :] = True     # Mask out all entries past the maximum
 
         lon_centers = lon_divs[i][:-1] + (lon_divs[i][1] - lon_divs[i][0])/2        # Center of each cell in longitude
-        grid_centers[i, :len(lon_centers), 0] = lat_centers[i]
-        grid_centers[i, :len(lon_centers), 1] = lon_centers
+        grid_centers[i, :len(lon_centers), 1] = lat_centers[i]
+        grid_centers[i, :len(lon_centers), 0] = lon_centers
 
     grid = np.ma.array(grid_centers, mask=grid_mask)
 
@@ -102,15 +102,15 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
 
 
 if __name__ == '__main__':
-    from geodarn.formats import Container
+    from geodarn import formats
     fig = plt.figure(figsize=[5, 5])
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.NorthPolarStereo(central_longitude=-100))
     ax.set_extent([-180, 180, 40, 90], ccrs.PlateCarree())
     ax.coastlines(zorder=5, alpha=0.4)
     ax.gridlines()
 
-    located = Container.hdf5_to_dataclass('/home/remington/repos/geodarn/20230110.1800.00.inv.located.hdf5')
-    gridded = Container.create_gridded_from_located(located)
+    located = formats.Container.from_hdf5('/data/special_experiments/202301/bistatic/inv/fitacf/20230110.1800.00.inv.located.hdf5')
+    gridded = formats.create_gridded_from_located(located)
     tx_site = gridded.tx_site_name
     rx_site = gridded.rx_site_name
     site_ids = [tx_site, rx_site]
@@ -127,11 +127,11 @@ if __name__ == '__main__':
     single_scan_indices = gridded.location_idx[slice_obj]
 
     for idx in single_scan_indices:
-        ax.scatter(x=gridded.location[idx, 1], y=gridded.location[idx, 0], transform=ccrs.PlateCarree(),
+        ax.scatter(x=gridded.location[idx, 0], y=gridded.location[idx, 1], transform=ccrs.PlateCarree(),
                    color='k', alpha=0.2, s=2)
 
     plt.show()
     plt.close()
 
-    # gridded.dataclass_to_hdf5('/home/remington/repos/geodarn/20230110.1800.00.inv.gridded.hdf5')
+    # gridded.to_hdf5('/home/remington/repos/geodarn/20230110.1800.00.inv.gridded.hdf5')
     print('Done')
