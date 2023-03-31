@@ -1,5 +1,8 @@
 import copy
+import warnings
 from datetime import datetime
+import argparse
+import os
 
 import shapely.geometry
 import numpy as np
@@ -95,6 +98,7 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
         ax.set_ylim(ys)
         # ax.set_facecolor('grey')
         ax.coastlines(zorder=5, alpha=0.2)
+        # ax.add_feature(cartopy.feature.NaturalEarthFeature('physical', 'land', '110m', facecolor='black'))
         ax.gridlines()
 
         # Mark the sites
@@ -133,10 +137,10 @@ def get_cmap_and_norm(param):
                     'lobe': [0, 7]
                     }
     colors = {
-        'power_db': 'jet',
+        'power_db': 'plasma',
         'velocity': matplotlib.colors.LinearSegmentedColormap.from_list('pydarn_velocity',
                                                                  ['darkred', 'r', 'pink', 'b', 'darkblue']),
-        'spectral_width': 'jet',
+        'spectral_width': 'viridis',
         'lobe': matplotlib.colors.ListedColormap(['grey', 'red', 'blue', 'green', 'yellow', 'orange', 'purple'])
     }
 
@@ -193,7 +197,7 @@ def add_fov_boundaries(axis, site):
 
 
 def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, site_ids=(), stem=True, colorbar=True):
-
+    warnings.simplefilter('ignore', UserWarning)
     plot_values = getattr(record, param)[idx_slice]
     locations = getattr(record, 'location')[idx_slice]
 
@@ -248,7 +252,7 @@ def plot_scans_on_map(infile, plot_dir, prefix=''):
         plot_single_param_from_scan(fig, axes[0], data, slice_obj, 'power_db', label='Power [dB]',
                                     site_ids=site_ids)
         plot_single_param_from_scan(fig, axes[1], data, slice_obj, 'velocity', label=f'{tstamp}\n\nVelocity [m/s]',
-                                    site_ids=site_ids, stem=False)
+                                    site_ids=site_ids, stem=True)
         plot_single_param_from_scan(fig, axes[2], data, slice_obj, 'spectral_width', label='Spectral Width [m/s]',
                                     site_ids=site_ids)
 
@@ -257,6 +261,16 @@ def plot_scans_on_map(infile, plot_dir, prefix=''):
 
 
 if __name__ == '__main__':
-    infile = '/data/special_experiments/202301/full_fov/rkn/corrected_tdiff/20230111.15-21.rkn.a.despeck.located.hdf5'
-    plot_dir = '/data/special_experiments/202301/full_fov/rkn/corrected_tdiff/despeck_scans'
-    plot_scans_on_map(infile, plot_dir)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('infile', help='File to plot scans from')
+    parser.add_argument('plot_dir', help='Directory to save plots in. Default is same as directory', default='')
+    args = parser.parse_args()
+
+    if args.plot_dir == '':
+        plot_dir = os.path.dirname(args.infile)
+    else:
+        plot_dir = args.plot_dir
+
+    # infile = '/data/special_experiments/202303/full_fov/cly/20230306.1330-1930.cly.located.hdf5'
+    # plot_dir = '/data/special_experiments/202303/full_fov/cly/scans/'
+    plot_scans_on_map(args.infile, plot_dir)
