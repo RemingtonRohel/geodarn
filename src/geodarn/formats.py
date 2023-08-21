@@ -69,6 +69,10 @@ class Container:
         metadata={'group': 'data',
                   'units': 'degrees',
                   'description': 'Array of [lon, lat] locations'})
+    lobe: np.ndarray = field(
+        metadata={'group': 'data',
+                  'units': 'None',
+                  'description': 'Lobe number for each point. 0 is main lobe, negative is CW, positive CCW.'})
     power_db: np.ndarray = field(
         metadata={'group': 'data',
                   'units': 'dB',
@@ -246,6 +250,7 @@ def create_located_from_records(records, tx_site, rx_site):
         lists['velocity_dir'].append(rec['look_dir'])
         lists['spectral_width'].append(rec['w_l'])
         lists['groundscatter'].append(rec['gsct'])
+        lists['lobe'].append(rec['lobe'])
 
     return Container(time=np.concatenate(lists['time']),
                      location=np.concatenate(lists['location']),
@@ -261,7 +266,9 @@ def create_located_from_records(records, tx_site, rx_site):
                      comment=records[0]['combf'],
                      tx_site_name=tx_site,
                      rx_site_name=rx_site,
-                     rx_freq=records[0]['tfreq'])
+                     rx_freq=records[0]['tfreq'],
+                     lobe=np.concatenate(lists['lobe'])
+                     )
 
 
 def create_gridded_from_located(located, **kwargs):

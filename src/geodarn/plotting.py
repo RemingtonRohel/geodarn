@@ -10,6 +10,7 @@ import cartopy.crs as ccrs
 import cartopy.geodesic
 import matplotlib
 import matplotlib.pyplot as plt
+import pydarn
 from matplotlib.transforms import offset_copy
 
 from geodarn import parse_hdw, formats
@@ -17,49 +18,23 @@ from geodarn.utils.constants import sites
 from geodarn import geolocation as gl
 
 
-def azimuthal_lines(site, min_range, max_range, beam_width=3.24, elevation=0.0):
+def plot_geolocated_lines(ax, param, start_points, end_points, values, **kwargs):
     """
     Plots the equidistant curves for the two radar sites, and the FOV of each site.
 
-    :param site: Three-letter identifier of transmit site
-    :param min_range: Distance to center of first range, in km.
-    :param max_range: Distance to far edge of furthest range, in km.
-    :param beam_width: Angular separation between beams, in degrees.
-    :param elevation: Degrees above horizontal
-    """
-    site_data = parse_hdw.Hdw.read_hdw_file(site)
-
-    az_lines = []
-
-    # Compute the azimuthal divisions of the site FOV
-    for i in range(-8, 9):
-        tx_bearing = site_data.boresight_direction + gl.azimuth_from_elevation(elevation, i * beam_width)
-        ranges = np.linspace(min_range, max_range, 100) * 1e3  # meters
-        tx_radial_line = cartopy.geodesic.Geodesic().direct((site_data.location[1], site_data.location[0]),
-                                                            tx_bearing, ranges)
-        tx_geom = shapely.geometry.LineString(tx_radial_line)
-        az_lines.append(tx_geom)
-
-    return az_lines
-
-
-def plot_geolocated_lines(axis, param, start_points, end_points, values):
-    """
-    Plots the equidistant curves for the two radar sites, and the FOV of each site.
-
-    :param axis: matplotlib axis to plot on
+    :param ax: matplotlib axis to plot on
     :param param: parameter to plot (used to get colormap)
     :param start_points: Array of (longitudes, latitudes) of the scattering locations
     :param end_points: Array of end points for each scattering velocity vector
     :param values: Array of values for coloring lines.
     """
-    cmap, norm = get_cmap_and_norm(param)
+    cmap, norm = get_cmap_and_norm(param, **kwargs)
     for i in range(start_points.shape[0]):
-        axis.plot([start_points[i, 0], end_points[i, 0]], [start_points[i, 1], end_points[i, 1]],
-                  color=cmap(norm(values[i])), linewidth=1.0, transform=ccrs.Geodetic())
+        ax.plot([start_points[i, 0], end_points[i, 0]], [start_points[i, 1], end_points[i, 1]],
+                color=cmap(norm(values[i])), linewidth=1.0, transform=ccrs.Geodetic())
 
 
-def plot_geolocated_scatter(axis, param, locations, values):
+def plot_geolocated_scatter(axis, param, locations, values, **kwargs):
     """
     Plots the equidistant curves for the two radar sites, and the FOV of each site.
 
@@ -68,8 +43,15 @@ def plot_geolocated_scatter(axis, param, locations, values):
     :param locations: Array of (longitudes, latitudes) of the scattering locations
     :param values: Array of values for coloring lines.
     """
-    cmap, norm = get_cmap_and_norm(param)
-    axis.scatter(locations[:, 0], locations[:, 1], c=cmap(norm(values)), alpha=0.5, s=5, transform=ccrs.PlateCarree())
+    cmap, norm = get_cmap_and_norm(param, **kwargs)
+    s = kwargs.get('s', 15)
+    alpha = kwargs.get('alpha', 1.0)
+    axis.scatter(locations[:, 0], locations[:, 1], c=cmap(norm(values)),
+                 # alpha=alpha,
+                 s=s,
+                 # edgecolors='black',
+                 linewidths=0.0,
+                 transform=ccrs.PlateCarree())
 
 
 def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 0), lat_extent=(55, 65),
@@ -96,20 +78,8 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
     def configure_axes(ax):
         ax.set_xlim(xs)
         ax.set_ylim(ys)
-        # ax.set_facecolor('grey')
         ax.coastlines(zorder=5, alpha=0.2)
-        # ax.add_feature(cartopy.feature.NaturalEarthFeature('physical', 'land', '110m', facecolor='black'))
         ax.gridlines()
-
-        # Mark the sites
-        for site, site_id in zip(ids, site_ids):
-            ax.plot(site.location[1], site.location[0], markersize=5, color='blue', marker='o',
-                    transform=ccrs.PlateCarree())
-            platecarree_transform = ccrs.PlateCarree()._as_mpl_transform(ax)
-            tx_transform = offset_copy(platecarree_transform, units='dots', x=sites[site_id]['hshift'],
-                                       y=sites[site_id]['vshift'])
-            ax.text(site.location[1], site.location[0], f'{site_id.upper()}', verticalalignment='bottom',
-                    horizontalalignment='left', transform=tx_transform)
 
     if isinstance(axes, np.ndarray):
         for axis in axes.flatten():
@@ -120,7 +90,7 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
     return fig, axes
 
 
-def get_cmap_and_norm(param):
+def get_cmap_and_norm(param, **kwargs):
     """
     Returns a colormap and norm for a given parameter.
 
@@ -134,18 +104,26 @@ def get_cmap_and_norm(param):
     value_ranges = {'power_db': [0, 40],
                     'velocity': [-1000, 1000],
                     'spectral_width': [0, 1000],
-                    'lobe': [0, 7]
+                    'lobe': [-7.5, 7.5]
                     }
     colors = {
         'power_db': 'plasma',
         'velocity': matplotlib.colors.LinearSegmentedColormap.from_list('pydarn_velocity',
-                                                                 ['darkred', 'r', 'pink', 'b', 'darkblue']),
+                                                                        ['darkred', 'r', 'pink', 'b', 'darkblue']),
         'spectral_width': 'viridis',
-        'lobe': matplotlib.colors.ListedColormap(['grey', 'red', 'blue', 'green', 'yellow', 'orange', 'purple'])
+        'lobe': 'coolwarm'
     }
+    if 'colormap' not in kwargs or kwargs['colormap'] is None:
+        colormap = colors[param]
+    else:
+        colormap = kwargs['colormap']
 
-    cmap = copy.copy(plt.cm.get_cmap(colors[param]))
-    cmap.set_bad(color='k', alpha=1.0)
+    cmap = copy.copy(plt.cm.get_cmap(colormap))
+    # cmap.set_bad(color='k', alpha=0.5)
+    if param == 'lobe':
+        old_cmap = list(map(cmap, range(256)))
+        cmap = cmap.from_list('newcmap', old_cmap[:110:18] + [(0, 0, 0, 0.4)] + old_cmap[146::18], N=15)
+
     norm = matplotlib.colors.Normalize(vmin=value_ranges[param][0], vmax=value_ranges[param][1])
 
     return cmap, norm
@@ -163,10 +141,12 @@ def add_colorbar(fig, axis, param, **kwargs):
     if param == 'groundscatter':
         ticks = [0.25, 0.75]
     elif param == 'lobe':
-        ticks = [(1+2*i)/2 for i in range(8)]
+        ticks = [i for i in range(-7, 8)]
     else:
         ticks = None
-    cmap, norm = get_cmap_and_norm(param)
+
+    cmap, norm = get_cmap_and_norm(param, **kwargs)
+    kwargs.pop('colormap', None)
 
     extend = {'power_db': 'max',
               'velocity': 'both',
@@ -178,8 +158,6 @@ def add_colorbar(fig, axis, param, **kwargs):
                         **kwargs)
     if param == 'groundscatter':
         cbar.ax.set_yticklabels(['Ionosphere', 'Ground'])
-    elif param == 'lobe':
-        cbar.ax.set_yticklabels([i for i in range(8)])
 
 
 def add_fov_boundaries(axis, site):
@@ -189,28 +167,32 @@ def add_fov_boundaries(axis, site):
     :param axis: matplotlib axis
     :param site: three-letter identifier for radar site
     """
-    fov = azimuthal_lines(site, 0, 180 + 45 * 75, beam_width=3.24)
-    axis.add_geometries((fov[0], fov[-1]), crs=ccrs.Geodetic(), facecolor='none', edgecolor='black', linewidth=0.5,
-                        alpha=1)
-
+    hdw_data = parse_hdw.Hdw.read_hdw_file(site)
+    pydarn.Fan.plot_fov(hdw_data.station_id,
+                        None,  # datetime, shouldn't matter for this projection.
+                        ax=axis,
+                        ccrs=ccrs,
+                        coords=pydarn.Coords.GEOGRAPHIC,
+                        projs=pydarn.Projs.GEO)
     return axis
 
 
-def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, site_ids=(), stem=True, colorbar=True):
+def plot_single_param_from_scan(fig, ax, record, idx_slice, param, label=None, site_ids=(), stem=True, colorbar=True,
+                                **kwargs):
     warnings.simplefilter('ignore', UserWarning)
     plot_values = getattr(record, param)[idx_slice]
     locations = getattr(record, 'location')[idx_slice]
 
     if param == 'velocity' and stem:
-        scale_value = 100  # Ratio of geographic distance in meters of plotted vector to LOS velocity value in m/s
+        scale_value = 250  # Ratio of geographic distance in meters of plotted vector to LOS velocity value in m/s
         end_points = cartopy.geodesic.Geodesic().direct(locations, getattr(record, 'velocity_dir')[idx_slice],
                                                         scale_value * plot_values)
-        plot_geolocated_lines(ax, param, locations, end_points[:, :2], plot_values)
+        plot_geolocated_lines(ax, param, locations, end_points[:, :2], plot_values, **kwargs)
 
-    plot_geolocated_scatter(ax, param, locations, plot_values)
+    plot_geolocated_scatter(ax, param, locations, plot_values, **kwargs)
 
     if colorbar:
-        add_colorbar(fig, ax, param, shrink=0.7)
+        add_colorbar(fig, ax, param, shrink=0.7, **kwargs)
     if label is not None:
         ax.set_title(label)
 
