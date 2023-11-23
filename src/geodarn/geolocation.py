@@ -76,25 +76,23 @@ def sidelobe_finder(beam_dirs, freq_hz, antenna_spacing_m=15.24, num_antennas=16
         raise ValueError('Sidelobe finder only valid for 16 equally-spaced antennas.')
 
     c = 299792458   # speed of light
+    k = 2 * np.pi * freq_hz / c  # wave number
 
     # Hardcoded sidelobe locations in frequency and main-lobe direction independent coordinates for array of 16
     # equally-spaced antennas.
-    qd = np.array([-0.2812, 0.2812,
-                   -0.4835, 0.4835,
-                   -0.6824, 0.6824,
-                   -0.8803, 0.8803,
-                   -1.0778, 1.0778,
-                   -1.2751, 1.2751,
-                   -1.4722, 1.4722], dtype=np.float32)
-    # qd = np.array([-1.4722, -1.2751, -1.0778, -0.8803, -0.6824, -0.4835, -0.2812,
-    #                0.2812,  0.4835,  0.6824,  0.8803,  1.0778,  1.2751,  1.4722],
-    #               dtype=np.float32)
-    q = qd / antenna_spacing_m
+    # These values are the peaks of | sin(Nx/2) / sin(x/2) |, excluding the central peak
+    x = np.array([-0.5624, 0.5624,
+                  -0.9669, 0.9669,
+                  -1.3649, 1.3649,
+                  -1.7607, 1.7607,
+                  -2.1556, 2.1556,
+                  -2.5502, 2.5502,
+                  -2.9445, 2.9445], dtype=np.float32)
+    sin_lobe_minus_sin_beam = x / (antenna_spacing_m * k)
     sin_beam = np.sin(np.deg2rad(beam_dirs))
-    k = 2 * np.pi * freq_hz / c   # wave number
 
     # result is [num_beams, num_sidelobes]
-    sin_sidelobes = sin_beam[:, np.newaxis] - 2 * q[np.newaxis, :] / k
+    sin_sidelobes = sin_beam[:, np.newaxis] + sin_lobe_minus_sin_beam[np.newaxis, :]
 
     # Not all sidelobes are present for all beam directions or frequencies, so we ignore the potential
     # RuntimeWarning with invalid arguments for arcsin here.
