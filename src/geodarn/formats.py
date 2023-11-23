@@ -70,9 +70,9 @@ class Container:
                   'units': 'degrees',
                   'description': 'Array of [lon, lat] locations'})
     lobe: np.ndarray = field(
-        metadata={'group': 'data',
-                  'units': 'None',
-                  'description': 'Lobe number for each point. 0 is main lobe, negative is CW, positive CCW.'})
+       metadata={'group': 'data',
+                 'units': 'None',
+                 'description': 'Lobe number for each point. 0 is main lobe, negative is CW, positive CCW.'})
     power_db: np.ndarray = field(
         metadata={'group': 'data',
                   'units': 'dB',
@@ -304,7 +304,8 @@ def create_gridded_from_located(located, **kwargs):
                         comment=located.comment,
                         tx_site_name=located.tx_site_name,
                         rx_site_name=located.rx_site_name,
-                        rx_freq=located.rx_freq)
+                        rx_freq=located.rx_freq,
+                        lobe=located.lobe)
     gridded.location_idx = idx_in_grid
 
     return gridded
