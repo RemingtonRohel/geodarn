@@ -170,13 +170,34 @@ def geolocate_scatter(tx_site, rx_site, elv, bmazm, slist):
     r = np.float32(ranges)                      # Saved as low precision, so cast to higher precision here
 
     hv_mid = np.sqrt(r*r / 4 + r_e*r_e + r_e*r*np.sin(rad_elv)) - r_e   # virtual height at midpoint
-    gamma = 2 * np.arcsin(r/2 * np.cos(rad_elv) / (r_e + hv_mid))       # total Earth arc angle
 
-    numerator = 1 - cos_site_arc*np.cos(gamma) - sin_site_arc*np.sin(gamma)*cos_alphas
-    denominator = cos_site_arc*np.sin(gamma) - sin_site_arc*np.cos(gamma)*cos_alphas
+    gamma = 2 * np.arcsin(r / 2 * np.cos(rad_elv) / (r_e + hv_mid))  # total Earth arc angle
 
-    tx_scatter_arc = np.arctan2(numerator, denominator)     # portion of gamma that is tx -> scatter
-    rx_scatter_arc = gamma - tx_scatter_arc                 # portion of gamma that is scatter -> rx
+    numerator = 1 - cos_site_arc * np.cos(gamma) - sin_site_arc * np.sin(gamma) * cos_alphas
+    denominator = cos_site_arc * np.sin(gamma) - sin_site_arc * np.cos(gamma) * cos_alphas
+
+    tx_scatter_arc = np.arctan2(numerator, denominator)  # portion of gamma that is tx -> scatter
+    rx_scatter_arc = gamma - tx_scatter_arc  # portion of gamma that is scatter -> rx
+
+    # Relaxation to find Lozinsky et al. (2022) elevation
+    eta = rad_elv
+    elv_lhs = eta
+    elv_rhs = eta - 0.5 * np.arcsin(r/2 * np.cos(rad_elv) / (r_e + hv_mid))
+
+    num_iterations = 1
+    while not np.allclose(elv_lhs, elv_rhs, equal_nan=True) and num_iterations < 10:
+        elv_lhs = elv_rhs
+
+        hv_mid = np.sqrt(r*r / 4 + r_e*r_e + r_e*r*np.sin(elv_lhs)) - r_e   # virtual height of midpoint
+        gamma = 2 * np.arcsin(r / 2 * np.cos(elv_lhs) / (r_e + hv_mid))     # total Earth arc angle
+        numerator = 1 - cos_site_arc * np.cos(gamma) - sin_site_arc * np.sin(gamma) * cos_alphas
+        denominator = cos_site_arc * np.sin(gamma) - sin_site_arc * np.cos(gamma) * cos_alphas
+        tx_scatter_arc = np.arctan2(numerator, denominator)     # portion of gamma that is tx -> scatter
+        rx_scatter_arc = gamma - tx_scatter_arc                 # portion of gamma that is scatter -> rx
+        elv_rhs = eta - 0.5 * rx_scatter_arc
+
+        num_iterations += 1
+    rad_elv = elv_lhs
 
     hv_rx = r_e * np.cos(rad_elv) / np.cos(rx_scatter_arc + rad_elv) - r_e      # virtual height of rx leg
     hv_tx = r_e * np.cos(rad_elv) / np.cos(tx_scatter_arc + rad_elv) - r_e      # virtual height of tx leg
