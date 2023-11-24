@@ -4,18 +4,15 @@ from datetime import datetime
 import argparse
 import os
 
-import shapely.geometry
 import numpy as np
 import cartopy.crs as ccrs
 import cartopy.geodesic
 import matplotlib
 import matplotlib.pyplot as plt
 import pydarn
-from matplotlib.transforms import offset_copy
 
 from geodarn import parse_hdw, formats
 from geodarn.utils.constants import sites
-from geodarn import geolocation as gl
 
 
 def plot_geolocated_lines(ax, param, start_points, end_points, values, **kwargs):
@@ -44,12 +41,11 @@ def plot_geolocated_scatter(axis, param, locations, values, **kwargs):
     :param values: Array of values for coloring lines.
     """
     cmap, norm = get_cmap_and_norm(param, **kwargs)
-    s = kwargs.get('s', 15)
+    s = kwargs.get('s', 20)
     alpha = kwargs.get('alpha', 1.0)
     axis.scatter(locations[:, 0], locations[:, 1], c=cmap(norm(values)),
                  # alpha=alpha,
                  s=s,
-                 # edgecolors='black',
                  linewidths=0.0,
                  transform=ccrs.PlateCarree())
 
@@ -119,7 +115,6 @@ def get_cmap_and_norm(param, **kwargs):
         colormap = kwargs['colormap']
 
     cmap = copy.copy(plt.cm.get_cmap(colormap))
-    # cmap.set_bad(color='k', alpha=0.5)
     if param == 'lobe':
         old_cmap = list(map(cmap, range(256)))
         cmap = cmap.from_list('newcmap', old_cmap[:110:18] + [(0, 0, 0, 0.4)] + old_cmap[146::18], N=15)
