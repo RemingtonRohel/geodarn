@@ -88,7 +88,9 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
         matching_points_lat = np.logical_and(lat < located.location[:, 1], located.location[:, 1] < lat + lat_width)
         matching_indices_lat = np.argwhere(matching_points_lat)
         lon_divs_for_lat = lon_divs[lat_idx[0]]
-        lon_indices = np.argwhere(np.logical_and(min_lon < lon_divs_for_lat, lon_divs_for_lat < max_lon))
+        lon_indices_temp = np.argwhere(np.logical_and(min_lon < lon_divs_for_lat, lon_divs_for_lat < max_lon))
+        if lon_indices_temp[0] != 0: # Just to be sure
+            lon_indices = np.append([lon_indices_temp[0].T-1], lon_indices_temp, axis=0)
 
         # Loop through the longitude bins with data
         for lon_idx in lon_indices:
