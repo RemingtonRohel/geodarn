@@ -51,7 +51,7 @@ def plot_geolocated_scatter(axis, param, locations, values, **kwargs):
 
 
 def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 0), lat_extent=(55, 65),
-                           size=(12, 12), **kwargs):
+                           size=(12, 12), gridlines=False, **kwargs):
     """
     Build a matplotlib figure for use in plotting bistatic data.
 
@@ -75,7 +75,7 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
         ax.set_xlim(xs)
         ax.set_ylim(ys)
         ax.coastlines(zorder=5, alpha=0.2)
-        ax.gridlines()
+        ax.gridlines(visible=gridlines)
 
     if isinstance(axes, np.ndarray):
         for axis in axes.flatten():
@@ -119,7 +119,9 @@ def get_cmap_and_norm(param, **kwargs):
         old_cmap = list(map(cmap, range(256)))
         cmap = cmap.from_list('newcmap', old_cmap[:110:18] + [(0, 0, 0, 0.4)] + old_cmap[146::18], N=15)
 
-    norm = matplotlib.colors.Normalize(vmin=value_ranges[param][0], vmax=value_ranges[param][1])
+    value_range = [kwargs.get('vmin', value_ranges[param][0]), kwargs.get('vmax', value_ranges[param][1])]
+
+    norm = matplotlib.colors.Normalize(vmin=value_range[0], vmax=value_range[1])
 
     return cmap, norm
 

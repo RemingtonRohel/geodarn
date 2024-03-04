@@ -288,7 +288,8 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
         phi0 = record['phi0']                                                       # main-intf array phase offsets
         lobe_num = np.zeros(slist.shape, dtype=int)                                 # which lobe each point came from
 
-        for lobe in range(sidelobes.shape[-1]):                             # Loop through all sidelobes
+        # Starts at 4 since closest 2 sidelobes on either side removed by Hamming window
+        for lobe in range(4, sidelobes.shape[-1]):                             # Loop through all sidelobes
             misplaced_points = results['rx_arc'] < 0.0                          # points behind the radar
             misplaced_points |= results['h_rx'] < min_hv                        # unphysically low
             misplaced_points |= results['h_tx'] < min_hv                        # unphysically low
@@ -303,9 +304,13 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
                 current_lobe = (lobe + 1) // 2
             lobe_num[misplaced_points] = current_lobe       # points attributed to this lobe
 
+            if lobe % 4 < 2:
+                new_phi0 = np.fmod(phi0[misplaced_points] + np.pi, 2 * np.pi)
+            else:
+                new_phi0 = phi0[misplaced_points]
+
             # Geolocate points based on new assumed sidelobe location
-            new_elv = find_elevation(rx_site, sidelobes[misplaced_points, lobe], record['tfreq']*1000,
-                                     phi0[misplaced_points])
+            new_elv = find_elevation(rx_site, sidelobes[misplaced_points, lobe], record['tfreq']*1000, new_phi0)
             corrected_results = geolocate_scatter(tx_site, rx_site, new_elv, sidelobes[misplaced_points, lobe],
                                                   slist[misplaced_points])
             for k, v in results.items():
@@ -323,7 +328,6 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
         if np.count_nonzero(valid_points) != 0:
             results[k] = v[valid_points]
         else:
-            #print(f'no valid points\t{k}: {type(v)}')
             shape = v.shape
             if len(shape) > 1:
                 shape = shape[1:]
@@ -362,3 +366,59 @@ def geolocate_record(record, rx_site, tx_site, min_hv: float = 100):
     results['combf'] = record['combf']
 
     return results
+
+
+def adjust_fitacf_in_place(record, rx_site, tx_site, min_hv: float = 100):
+    """
+    Adjusts data in record, flagging 'bad' points and adjusting velocities based on geolocated positions.
+
+    Parameters
+    ----------
+    record: dict
+        A single FITACF record
+    rx_site: str
+        Three-letter receiver radar code, such as 'rkn' or 'sas'. Lowercase letters
+    tx_site: str
+        Three-letter transmitter radar code, such as 'rkn' or 'sas'. Lowercase letters
+    min_hv: float
+        Minimum virtual height in km, used for identifying side lobe scatter. Default 100.
+
+    Returns
+    -------
+    fitacf dict with extra keys:
+    """
+    if 'slist' not in record.keys():
+        return record
+    results = geolocate_scatter(tx_site, rx_site, record['elv'], record['bmazm'], record['slist'])
+    slist = record['slist']
+
+    if rx_site == tx_site:
+        valid_points = np.full(slist.shape, True)  # Assume all points are valid for monostatic
+        results['lobe'] = np.zeros_like(slist, dtype=int)
+    else:
+        geodesic = cartopy.geodesic.Geodesic()
+        rx = Hdw.read_hdw_file(rx_site)
+        tx = Hdw.read_hdw_file(tx_site)
+
+        distances = geodesic.inverse((rx.location[1], rx.location[0]), (tx.location[1], tx.location[0]))
+        site_separation = distances[0, 0] / 1000  # km
+        min_range_gate = round((site_separation - 360) / 90.)  # based on great circle distance between sites
+
+        impossible_points = slist < min_range_gate  # unphysical (faster than light)
+        direct_points = np.logical_and(min_range_gate + 2 >= slist, record['gflg'] == 1)  # direct mode
+        valid_points = np.logical_and(~impossible_points, ~direct_points)   # neither impossible nor direct
+
+        # Any points that didn't fit a sidelobe should be wiped out
+        misplaced_points = results.pop('rx_arc') < 0.0                      # placed behind the radar
+        misplaced_points |= results.pop('h_rx') < min_hv                    # unphysically low
+        misplaced_points |= results.pop('h_tx') < min_hv                    # unphysically low
+        misplaced_points |= np.isnan(results['scatter_location'][:, 0])     # had a calculation error somewhere
+
+        record['gflg'][valid_points] = 0
+        record['gflg'][~valid_points] = 1
+        record['gflg'][misplaced_points] = 2
+
+        valid_points &= ~misplaced_points   # only correct velocities of valid points
+        record['v'][valid_points] *= results.pop('velocity_correction')[valid_points]
+
+    return record
