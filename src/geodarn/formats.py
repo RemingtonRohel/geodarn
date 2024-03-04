@@ -1,5 +1,5 @@
 """
-Dataclass containers for ICEBEAR-3D data processing and HDF5 data packing.
+Dataclass containers for SuperDARN FITACF data processing and HDF5 data packing.
 """
 import os
 import re
