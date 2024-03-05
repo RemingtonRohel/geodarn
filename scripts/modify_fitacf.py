@@ -1,9 +1,23 @@
+# This file is part of geodarn.
+#
+# geodarn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# geodarn is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with geodarn.
+# If not, see <https://www.gnu.org/licenses/>.
+#
+# Copyright 2024 Remington Rohel
+
 import os
 import glob
 import argparse
 import pydarnio
 
-from geodarn import geolocation, extract_records
+from geodarn import geolocation
+
 
 def main(directory, out_dir, pattern, tx_site, rx_site):
     files = glob.glob(f'{directory}/{pattern}')
@@ -23,8 +37,6 @@ def main(directory, out_dir, pattern, tx_site, rx_site):
             print()
             writer = pydarnio.SDarnWrite(geo_records, outname)
             writer.write_fitacf(outname)
-
-
 
 
 if __name__ == '__main__':
