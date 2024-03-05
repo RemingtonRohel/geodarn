@@ -4,18 +4,15 @@ from datetime import datetime
 import argparse
 import os
 
-import shapely.geometry
 import numpy as np
 import cartopy.crs as ccrs
 import cartopy.geodesic
 import matplotlib
 import matplotlib.pyplot as plt
 import pydarn
-from matplotlib.transforms import offset_copy
 
 from geodarn import parse_hdw, formats
 from geodarn.utils.constants import sites
-from geodarn import geolocation as gl
 
 
 def plot_geolocated_lines(ax, param, start_points, end_points, values, **kwargs):
@@ -44,18 +41,17 @@ def plot_geolocated_scatter(axis, param, locations, values, **kwargs):
     :param values: Array of values for coloring lines.
     """
     cmap, norm = get_cmap_and_norm(param, **kwargs)
-    s = kwargs.get('s', 15)
+    s = kwargs.get('s', 20)
     alpha = kwargs.get('alpha', 1.0)
     axis.scatter(locations[:, 0], locations[:, 1], c=cmap(norm(values)),
                  # alpha=alpha,
                  s=s,
-                 # edgecolors='black',
                  linewidths=0.0,
                  transform=ccrs.PlateCarree())
 
 
 def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 0), lat_extent=(55, 65),
-                           size=(12, 12), **kwargs):
+                           size=(12, 12), gridlines=False, **kwargs):
     """
     Build a matplotlib figure for use in plotting bistatic data.
 
@@ -79,7 +75,7 @@ def generate_bistatic_axes(site_ids, dims, center=(-110, 60), lon_extent=(-140, 
         ax.set_xlim(xs)
         ax.set_ylim(ys)
         ax.coastlines(zorder=5, alpha=0.2)
-        ax.gridlines()
+        ax.gridlines(visible=gridlines)
 
     if isinstance(axes, np.ndarray):
         for axis in axes.flatten():
@@ -119,12 +115,13 @@ def get_cmap_and_norm(param, **kwargs):
         colormap = kwargs['colormap']
 
     cmap = copy.copy(plt.cm.get_cmap(colormap))
-    # cmap.set_bad(color='k', alpha=0.5)
     if param == 'lobe':
         old_cmap = list(map(cmap, range(256)))
         cmap = cmap.from_list('newcmap', old_cmap[:110:18] + [(0, 0, 0, 0.4)] + old_cmap[146::18], N=15)
 
-    norm = matplotlib.colors.Normalize(vmin=value_ranges[param][0], vmax=value_ranges[param][1])
+    value_range = [kwargs.get('vmin', value_ranges[param][0]), kwargs.get('vmax', value_ranges[param][1])]
+
+    norm = matplotlib.colors.Normalize(vmin=value_range[0], vmax=value_range[1])
 
     return cmap, norm
 
