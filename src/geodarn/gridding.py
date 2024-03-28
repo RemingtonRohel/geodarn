@@ -89,7 +89,7 @@ def create_grid_records(located, lat_min=50, lat_width=1.0, hemisphere='north'):
         matching_indices_lat = np.argwhere(matching_points_lat)
         lon_divs_for_lat = lon_divs[lat_idx[0]]
         lon_indices_temp = np.argwhere(np.logical_and(min_lon < lon_divs_for_lat, lon_divs_for_lat < max_lon))
-        if not lon_indices_temp:
+        if not lon_indices_temp.any():
             # For when min_lat and max_lat have too small of a delta to grid
             continue
         if lon_indices_temp[0] != 0: # Just to be sure
